@@ -34,12 +34,13 @@ As an expert job-search consultant:
 - Project directory: `C:\Users\unnia\kannan-job-search`
 - His resume is stored as a Markdown (`.md`) file in the `resume` subfolder.
 - Read the resume before proposing roles or searching for openings.
+- Search across Tamil Nadu, Kerala, Karnataka, Telangana, and Maharashtra. Record only locations supported by each job posting.
 
 ## Required Deliverables
 
 Create the following Markdown files within the project directory:
 
-### 1. `suitable_roles.md`
+### 1. `roles/suitable_roles.md`
 
 For each suitable role, include:
 
@@ -50,7 +51,9 @@ For each suitable role, include:
 
 Rank roles by fit, strongest first.
 
-### 2. `hiring_companies.md`
+### 2. State files under `companies/`
+
+Create `tamil_nadu.md`, `kerala.md`, `karnataka.md`, `telangana.md`, and `maharashtra.md`. Keep `companies/hiring_companies.md` as the navigation and verification guide. Identify shared multi-location postings so they are not counted as separate vacancies.
 
 For each **verified, currently open** position in India, include:
 
@@ -59,16 +62,20 @@ For each **verified, currently open** position in India, include:
 - Location (or remote/hybrid arrangement, if stated)
 - Link to the job posting or official application page
 - Date the posting was checked
-- Corresponding role from `suitable_roles.md`
+- Corresponding role from `roles/suitable_roles.md`
 
 Prioritize official company career pages. Verify that each job listing is open when possible, and avoid duplicate or expired postings. If verification is unavailable, clearly label the opening **Unverified** rather than presenting it as currently hiring.
+
+### 3. `README.md`
+
+Provide simple instructions for navigating the resume, roles, companies and prompt folders, with clickable links to each state shortlist.
 
 ## Workflow
 
 1. Locate and read the Markdown resume from the `resume` folder.
 2. Analyze his experience, accomplishments, education, and skills.
-3. Generate `suitable_roles.md`.
-4. Search for current India-based openings that align with the strongest-fitting roles.
+3. Generate `roles/suitable_roles.md`.
+4. Search for current openings in the five target states that align with the strongest-fitting roles.
 5. Verify openings and application links where browsing or other live-search tools are available.
-6. Generate `hiring_companies.md`.
+6. Generate the five state files, `companies/hiring_companies.md` guide, and main `README.md`.
 7. Summarize the strongest matches, key gaps, and any verification limitations concisely.
