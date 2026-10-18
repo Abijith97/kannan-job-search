@@ -1,6 +1,6 @@
 # India hiring shortlist for Arun Kannan
 
-Checked: **18 October 2026 (India time)**. Based on the [resume](resume/Arun_Kannan_Resume.md) and [ranked suitable roles](suitable_roles.md). Prioritized Bengaluru and the strongest role families: education partnerships, business development and admissions.
+Checked: **18 October 2026 (India time)**. Based on the [resume](../resume/Arun_Kannan_Resume.md) and [ranked suitable roles](../roles/suitable_roles.md). Prioritized Bengaluru and the strongest role families: education partnerships, business development and admissions.
 
 ## Verification standard
 

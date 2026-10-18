@@ -1,6 +1,6 @@
 # Suitable roles for Arun Kannan
 
-Assessed: 18 October 2026. Primary source: [provided resume](resume/Arun_Kannan_Resume.md). These are assessments of documented experience, not predictions of interview success. Bengaluru is prioritized because it is his stated location; relocation, compensation, notice period and travel preferences are unknown.
+Assessed: 18 October 2026. Primary source: [provided resume](../resume/Arun_Kannan_Resume.md). These are assessments of documented experience, not predictions of interview success. Bengaluru is prioritized because it is his stated location; relocation, compensation, notice period and travel preferences are unknown.
 
 ## Profile assessment
 
@@ -39,4 +39,4 @@ The chronology supports approximately 3 years 2 months since August 2023, plus a
 - What are his notice period, expected fixed compensation, and willingness to work six-day schedules?
 - Which destinations, languages, CRM tools and application/visa processes can he demonstrate?
 
-Confidence is **high** in the top three role families, **medium** in the adjacent roles, and lower for seniority or eligibility where the resume lacks detail. No evidence currently supports people-management positions, advanced BI/data analyst jobs, or specialist financial/clinical research roles. Vacancy-specific constraints are recorded in [hiring_companies.md](hiring_companies.md).
+Confidence is **high** in the top three role families, **medium** in the adjacent roles, and lower for seniority or eligibility where the resume lacks detail. No evidence currently supports people-management positions, advanced BI/data analyst jobs, or specialist financial/clinical research roles. Vacancy-specific constraints are recorded in [hiring_companies.md](../companies/hiring_companies.md).
