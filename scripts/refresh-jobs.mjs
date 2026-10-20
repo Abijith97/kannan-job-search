@@ -1,7 +1,9 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, rename } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { load } from 'cheerio/slim';
-import { loadCatalog } from './catalog.mjs';
+import { loadCatalog, parseResume } from './catalog.mjs';
+import { discoveryProfile, discoverProfileJobs, inspectCandidate } from './profile-search.mjs';
+import { fetchPublicPage } from './public-web.mjs';
 import { discoverCards, detailLocation, mergeSnapshot } from './discovery.mjs';
 import { fetchOfficial, jobDescription, inferLocations, listingKey, normalizedTitle } from '../src/listings.mjs';
 
@@ -11,6 +13,8 @@ const seeds = await loadCatalog(process.cwd(), { seedOnly: true });
 const now = new Date().toISOString(), sourceResults = [], discovered = [], closedIds = new Set();
 const seen = new Set();
 const hash = text => createHash('sha256').update(text).digest('hex').slice(0, 12).toUpperCase();
+if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required for the nightly profile search.');
+const profile = discoveryProfile(parseResume(await readFile('resume/Arun_Kannan_Resume.md', 'utf8')), await readFile('roles/suitable_roles.md', 'utf8'));
 
 for (const source of sources) {
   let count = 0, warning = null;
@@ -51,9 +55,26 @@ for (const source of sources) {
   console.log(`${source.id}: ${sourceResults.at(-1).status}; ${count} relevant listings verified`);
 }
 const success = new Set(sourceResults.filter(x => x.status === 'ok').map(x => x.id));
-const jobs = mergeSnapshot(previous, seeds, discovered, success, now);
-for (const job of jobs) if (closedIds.has(job.id)) { job.availability = 'closed'; job.checked = now.slice(0, 10); }
-const snapshot = { updatedAt: now, jobs, sources: sourceResults };
-await writeFile('data/job-snapshot.json', JSON.stringify(snapshot, null, 2) + '\n');
+// Recheck vacancies found on earlier broad searches without spending AI credit.
+const rechecks = (previous.jobs || []).filter(job => job.discoveryMethod === 'profile-web-search' && job.availability !== 'closed').sort((a, b) => (a.lastVerifiedAt || '').localeCompare(b.lastVerifiedAt || '')).slice(0, 30);
+for (let start = 0; start < rechecks.length; start += 3) {
+  const results = await Promise.allSettled(rechecks.slice(start, start + 3).map(async job => {
+    try { discovered.push({ ...job, ...inspectCandidate(await fetchPublicPage(job.url), job, job.locations[0].state, now) }); }
+    catch (error) { if (error.closed || error.status === 410) closedIds.add(job.id); }
+  }));
+  for (const result of results) if (result.status === 'rejected') throw result.reason;
+}
+let snapshot;
+async function persist(discovery, searchJobs) {
+  const jobs = mergeSnapshot(previous, seeds, [...discovered, ...(discovery.phase === 'complete' ? searchJobs : [])], success, now);
+  for (const job of jobs) if (closedIds.has(job.id)) { job.availability = 'closed'; job.checked = now.slice(0, 10); }
+  snapshot = { updatedAt: now, jobs, sources: sourceResults, discovery: { ...discovery, pendingJobs: discovery.phase === 'complete' ? [] : searchJobs.length ? searchJobs : discovery.pendingJobs || [] } };
+  await writeFile('data/job-snapshot.json.tmp', JSON.stringify(snapshot, null, 2) + '\n');
+  await rename('data/job-snapshot.json.tmp', 'data/job-snapshot.json');
+}
+const result = await discoverProfileJobs({ profile, previous: previous.discovery, existingJobs: mergeSnapshot(previous, seeds, discovered, success, now), now, apiKey: process.env.OPENAI_API_KEY, onProgress: persist });
+await persist(result.info, result.jobs);
+const { jobs } = snapshot;
+for (const state of result.info.states) console.log(`Profile search — ${state.state}: ${state.status}; ${state.acceptedCount || 0} new verified matches${state.message ? `; ${state.message}` : ''}`);
 console.log(`Saved ${jobs.filter(x => x.availability !== 'closed').length} listings; ${jobs.filter(x => !x.isSeed && x.firstSeenAt === now).length} newly discovered.`);
-if (sourceResults.every(source => source.status === 'failed')) process.exitCode = 1;
+if (result.info.phase === 'failed' || result.info.states.every(state => state.status === 'failed')) process.exitCode = 1;

@@ -30,6 +30,17 @@ try {
   await page.locator('#sort-order').selectOption('oldest');
   assert.equal(await page.locator('#job-rows tr').first().getAttribute('data-job-id'), sortJobs(active, 'oldest')[0].id);
   await page.locator('#sort-order').selectOption('newest');
+  await page.locator('#status-filter').selectOption('matched');
+  const matched = active.filter(job => job.profileMatch);
+  assert.equal(await page.locator('#job-rows tr').count(), matched.length);
+  if (matched.length) {
+    const firstMatch = page.locator('tr[data-job-id="' + matched[0].id + '"]');
+    await firstMatch.locator('.fit-details summary').click();
+    assert.ok(await firstMatch.getByText(matched[0].profileMatch.reason, { exact: true }).isVisible());
+    assert.ok(await firstMatch.getByRole('link', { name: 'Source listing' }).getAttribute('href'));
+    await firstMatch.locator('.fit-details summary').click();
+  }
+  await page.locator('#status-filter').selectOption('all');
   await page.getByRole('button', { name: 'Tamil Nadu', exact: true }).click();
   assert.equal(await page.locator('#job-rows tr').count(), active.filter(job => job.locations.some(x => x.state === 'Tamil Nadu')).length);
   const row = page.locator('tr[data-job-id="SM-BDO"]');

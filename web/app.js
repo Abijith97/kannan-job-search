@@ -28,13 +28,21 @@ async function refresh() {
   $('#apply-help').textContent = 'Create custom resume prepares and downloads an editable Word file for the role. Review it in Word, then submit it using the employer’s application link.';
   const refreshInfo = data.refreshInfo;
   $('#refresh-info').textContent = refreshInfo?.updatedAt ? `Last checked ${new Date(refreshInfo.updatedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} IST. ${refreshInfo.sources.filter(x => x.status !== 'ok').length} source(s) need a recheck.` : 'Nightly employer checks are scheduled for 2:00 a.m. IST.';
+  const discovery = refreshInfo?.discovery;
+  if (!discovery) $('#discovery-info').textContent = 'Nightly web searches will find roles across employers in all five states and assess them against your resume. First search pending.';
+  else {
+    const searched = discovery.states.filter(state => state.status !== 'failed').length;
+    const date = new Date(discovery.completedAt || refreshInfo.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    $('#discovery-info').textContent = `Profile-based web discovery · ${date} · ${searched}/5 states searched. ${discovery.phase === 'complete' ? `${discovery.acceptedCount || 0} new verified matches in the latest search.` : 'The latest assessment needs another check; earlier matches are preserved.'} Open “Why it fits” for the experience match and requirements to confirm.`;
+  }
   render();
 }
 
 function render() {
   const query = $('#search').value.trim().toLowerCase();
   const status = $('#status-filter').value;
-  const rows = sortJobs(jobs.filter(job => locations(job).length && (status === 'all' || (status === 'recent' ? job.isNew : job.status === status)) && `${job.title} ${job.company} ${job.locations.map(x => `${x.state} ${x.label}`).join(' ')}`.toLowerCase().includes(query)), $('#sort-order').value);
+  const matchesStatus = job => status === 'all' || (status === 'recent' ? job.isNew : status === 'matched' ? Boolean(job.profileMatch) : job.status === status);
+  const rows = sortJobs(jobs.filter(job => locations(job).length && matchesStatus(job) && `${job.title} ${job.company} ${job.locations.map(x => `${x.state} ${x.label}`).join(' ')}`.toLowerCase().includes(query)), $('#sort-order').value);
   $('#total-count').textContent = String(jobs.length).padStart(2, '0');
   $('#ready-count').textContent = String(jobs.filter(x => generationAvailable ? x.hasResume : x.status === 'interested').length).padStart(2, '0');
   $('#ready-label').textContent = generationAvailable ? 'resumes ready' : 'roles of interest';
@@ -48,6 +56,11 @@ function render() {
     const statusLabel = job.status === 'ready' ? 'Resume ready' : job.status === 'skipped' ? 'Skipped' : job.status === 'interested' ? 'Interested' : `${job.fit} fit`;
     return `<tr class="${job.status === 'skipped' ? 'skipped-row' : ''}" data-job-id="${escape(job.id)}"><td><div class="role-cell"><span class="company-mark" aria-hidden="true">${escape(job.company[0])}</span><div><span class="role-title">${escape(job.title)}${job.isNew ? '<span class="new-badge">New</span>' : ''}</span><div class="company-line">${escape(job.company)}<span class="role-badge ${job.status}">${escape(statusLabel)}</span></div></div></div></td><td><a class="job-link" href="${escape(job.url)}" target="_blank" rel="noopener noreferrer">View opening ↗</a></td><td class="location">${escape(primaryLocation)}<small>${escape(secondaryLocation)}</small></td><td class="published-date">${job.publishedAt ? escape(new Date(job.publishedAt + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })) : '<span class="quiet">Date unavailable</span>'}<small>Checked ${escape(job.checked)}</small></td><td><div class="row-actions">${job.status === 'skipped' ? `<button class="button secondary" data-action="restore" data-id="${job.id}">Restore</button>` : `<button class="button primary" data-action="${job.hasResume ? 'review' : 'apply'}" data-id="${job.id}">${job.hasResume ? 'View resume' : 'Create custom resume'}</button><button class="text-button" data-action="skip" data-id="${job.id}" aria-label="Skip ${escape(job.title)} at ${escape(job.company)}">Skip</button>`}</div></td></tr>`;
   }).join('');
+  for (const job of rows.filter(job => job.profileMatch)) {
+    const match = job.profileMatch;
+    const cell = document.querySelector(`tr[data-job-id="${job.id}"] .role-cell>div`);
+    cell.insertAdjacentHTML('beforeend', `<details class="fit-details"><summary>Why it fits · ${escape(match.score)}/100</summary><p>${escape(match.reason)}</p>${match.requirements.length ? `<p><b>Check before applying:</b> ${escape(match.requirements.join(' '))}</p>` : ''}<a href="${escape(job.discoverySourceUrl)}" target="_blank" rel="noopener noreferrer">Source listing ↗</a></details>`);
+  }
   $('#empty-state').hidden = rows.length !== 0;
   $('.table-wrap').hidden = rows.length === 0;
 }

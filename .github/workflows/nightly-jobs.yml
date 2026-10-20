@@ -12,7 +12,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -20,9 +20,14 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Check official employer listings in the five states
+      - name: Search the five states using the resume and check employer listings
+        id: refresh
+        continue-on-error: true
         run: node scripts/refresh-jobs.mjs
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       - name: Save refreshed listings and deploy
+        if: always() && !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -33,3 +38,8 @@ jobs:
           git commit -m 'Refresh official job listings'
           git push
           gh workflow run website.yml --ref main
+      - name: Report a failed profile search
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo '::error::Profile discovery failed. Check the refresh log; earlier jobs and the daily attempt ledger were preserved.'
+          exit 1

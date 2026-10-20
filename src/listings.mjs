@@ -94,7 +94,7 @@ export function jobDescription(html, job, now = new Date()) {
   }
   const explicitlyClosed = /no longer accepting applications|position (?:has been |is )?closed|job (?:has been |is )?(?:closed|expired)|no longer available/i.test(description);
   if (explicitlyClosed || (Number.isFinite(expires) && expires < now.getTime())) return { description: '', publishedAt: publishedDate(structured?.datePosted, now), availability: 'closed' };
-  if (description.length < 40 || !suitableTitle(job.title)) throw new Error('A usable description for this exact role could not be read.');
+  if (description.length < 40 || (!suitableTitle(job.title) && job.discoveryMethod !== 'profile-web-search')) throw new Error('A usable description for this exact role could not be read.');
   const posted = publishedDate(structured?.datePosted || $('[itemprop="datePosted"]').attr('content') || $('[itemprop="datePosted"]').text(), now);
   return { description: description.slice(0, 16000), publishedAt: posted, availability: 'open' };
 }
