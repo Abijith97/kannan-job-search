@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local development. Never commit real values.
+APP_ACCESS_PASSWORD=replace-with-a-long-private-passphrase

@@ -2,6 +2,21 @@
 
 Job-search research for Arun Kannan across **Tamil Nadu, Kerala, Karnataka, Telangana, and Maharashtra**.
 
+## Website
+
+The website provides a private job table with role, employer application link, location, and Apply/Skip controls. Filter by state, search by role or city, and revisit saved choices from another device.
+
+- **Apply** saves interest and opens role details with the employer's application link.
+- **Skip** saves the role for later; **Restore** returns it to the shortlist.
+- Sign in with the passphrase stored as `APP_ACCESS_PASSWORD`.
+- Resume preparation is disabled for this initial website release. The deployment does not use the OpenAI secret or make OpenAI requests.
+
+GitHub Actions checks and deploys the site to Cloudflare Workers on pushes to `main`. Open the latest [website workflow run](https://github.com/Abijith97/kannan-job-search/actions/workflows/website.yml) for the deployed link. Cloudflare stores decisions and sessions in a SQLite-backed Durable Object.
+
+Deployment uses repository secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `APP_ACCESS_PASSWORD` (at least 16 characters). The Cloudflare token needs Workers Scripts Edit for the selected account. No custom domain is required.
+
+For local website development: install Node.js 24, run `npm ci`, copy `.dev.vars.example` to `.dev.vars` with a local passphrase, and run `npm run dev`. Run `npm test` for website checks. Never commit `.dev.vars` or secret values.
+
 ## How to use this repository
 
 1. Open [the resume](resume/Arun_Kannan_Resume.md) to understand his experience.

@@ -1,0 +1,31 @@
+{
+  "ZOLVE-BDA": {
+    "fit": "High",
+    "brief": "Study-abroad affiliate and counsellor partnerships; student lead acquisition; financial-product sales; partner visits and training. Requires 2–5 years in relevant sales, business development or partnerships, prior affiliate/counsellor/loan/visa partner management, CRM and Excel, English and travel readiness.",
+    "caution": "The header says Bengaluru but the description lists multiple territories. Confirm the chosen location. Financial products, named CRM tools and travel readiness are not established by the resume."
+  },
+  "SM-BDO": {
+    "fit": "High",
+    "brief": "Education-sector business development using market research, sales strategies, relationship building, communication and analytical skills. The official description is brief and does not state a numerical experience minimum.",
+    "caution": "Confirm branch availability, experience requirements, language expectations and travel. One posting covers multiple states."
+  },
+  "SM-SRO": {
+    "fit": "High",
+    "brief": "Student Relation Officer: bachelor's degree, counselling expertise, communication and language proficiency, advising and guidance, teamwork and adaptability. Detailed destination expertise and seniority requirements are not specified.",
+    "caution": "Confirm the exact branch and destination knowledge required. One posting covers multiple states."
+  },
+  "ENV-BDE-CHN": { "fit": "High", "brief": "Field business development connecting with schools, colleges and local partners to promote study-abroad opportunities.", "caution": "Experience threshold and pay are unspecified. Confirm field travel and local language expectations." },
+  "ENV-BDE-CBE": { "fit": "High", "brief": "On-ground marketing and student outreach for study-abroad services, requiring communication and field execution.", "caution": "Confirm field travel, language expectations and experience threshold." },
+  "ENV-BDE-BLR": { "fit": "High", "brief": "Campus visits, seminars and field activations promoting study-abroad services; coordination and outreach skills.", "caution": "Confirm fieldwork requirements and expected experience." },
+  "ENV-BDE-PUNE": { "fit": "High", "brief": "Outdoor campaigns to generate qualified student leads and engagement; comfort with travel and fieldwork.", "caution": "Confirm working languages, field travel and experience threshold." },
+  "ENV-BDE-MUM": { "fit": "High", "brief": "Outdoor marketing to build awareness of study-abroad services; energetic and results-focused business development.", "caution": "Confirm experience threshold, working languages and travel expectations." },
+  "ENV-SC-CHN": { "fit": "High", "brief": "Guide students through their study-abroad journey with strong communication and counselling skills.", "caution": "Detailed destination expertise and experience requirements are unspecified." },
+  "ENV-SC-CBE": { "fit": "High", "brief": "Guide students in selecting a study-abroad path using counselling and clear communication.", "caution": "Confirm destination coverage and experience threshold." },
+  "ENV-SC-PUNE": { "fit": "High", "brief": "Guide students through overseas education choices; communication and counselling skills are required.", "caution": "Confirm destination coverage, working languages and seniority." },
+  "IDP-4489": { "fit": "High", "brief": "Education counselling, application documentation, enrolment conversion, student pipeline goals, customer service and referrals. Requires sales/customer-service experience, education-sector and immigration-process knowledge, relevant qualifications or counselling experience, and English communication.", "caution": "Broader destination and immigration-process expertise need evidence. Application completion was not tested." },
+  "IDP-4614": { "fit": "Medium", "brief": "Senior education counselling, applications, enrolments, student pipeline targets and referrals. Requires sales/customer-service experience, education-sector and immigration-process knowledge, relevant qualifications or counselling experience, and English. No numerical experience minimum stated.", "caution": "Confirm seniority expectations and destination knowledge; do not infer visa-processing expertise from a UK degree." },
+  "IDP-4615": { "fit": "Medium", "brief": "Senior education counselling, applications, enrolments, student pipeline targets and referrals. Requires sales/customer-service experience, education-sector and immigration-process knowledge, relevant qualifications or counselling experience, and English. No numerical experience minimum stated.", "caution": "Confirm seniority expectations and destination knowledge; do not infer visa-processing expertise from a UK degree." },
+  "LEAP-SRM": { "fit": "Medium", "brief": "Education-finance counselling, matching students with lenders, loan documentation, lender coordination and target achievement. Accepts 1–4 years in loan advice, EdTech sales or counselling. Office work, 10 a.m.–7 p.m., Monday–Saturday.", "caution": "Lending knowledge is not documented. Confirm that this older Freshteam requisition is still processed by Leap." },
+  "VIAVIFA-OEC": { "fit": "Medium", "brief": "Overseas education counselling and sales covering course selection, admissions forms, SOP support, financial documentation, education loans and pre-departure help. Graduate with at least two years' experience and prior overseas counselling.", "caution": "SOP, visa, loans and documentation expertise are not established. No posting or closing date shown." },
+  "COK-EXT": { "fit": "Medium", "brief": "External Marketing Executive: full-time school and college outreach, education fairs, alumni/parent events and partner activation across Kerala. Requires 2+ years of field marketing or partnerships and travel across Kerala.", "caution": "Only about nine months in a dedicated partnership role are documented; earlier sales work may not satisfy the field-marketing tenure requirement." }
+}

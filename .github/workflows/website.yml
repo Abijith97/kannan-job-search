@@ -1,0 +1,80 @@
+name: Website — check and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:website
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: npm run check:deploy
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Validate deployment settings
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          APP_ACCESS_PASSWORD: ${{ secrets.APP_ACCESS_PASSWORD }}
+        run: |
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID APP_ACCESS_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::Missing repository secret: $name"; exit 1; fi
+          done
+          if [ "${#APP_ACCESS_PASSWORD}" -lt 16 ]; then echo '::error::APP_ACCESS_PASSWORD must contain at least 16 characters'; exit 1; fi
+      - name: Deploy website and runtime secrets
+        id: publish
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          secrets: |
+            APP_ACCESS_PASSWORD
+        env:
+          APP_ACCESS_PASSWORD: ${{ secrets.APP_ACCESS_PASSWORD }}
+          WRANGLER_SEND_METRICS: 'false'
+      - name: Check the live website
+        run: node scripts/deployed-check.mjs
+        env:
+          SITE_URL: ${{ steps.publish.outputs.deployment-url }}
+          APP_ACCESS_PASSWORD: ${{ secrets.APP_ACCESS_PASSWORD }}
+      - name: Publish website link
+        env:
+          SITE_URL: ${{ steps.publish.outputs.deployment-url }}
+        run: printf 'Website deployed and verified at %s\n' "$SITE_URL" >> "$GITHUB_STEP_SUMMARY"

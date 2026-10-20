@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#214d43">
+  <meta name="description" content="A private job shortlist and application tracker for Arun Kannan.">
+  <title>Next Chapter · Arun's job search</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Next Chapter home"><span class="monogram">ak<span>↗</span></span><span>NEXT CHAPTER<small>Arun's job search</small></span></a>
+    <div class="header-right"><span class="private-label"><span class="dot"></span> Private workspace</span><button id="logout" class="text-button" hidden>Sign out ↗</button></div>
+  </header>
+  <main id="main">
+    <p id="loading" role="status" class="initial-loading">Opening your workspace…</p>
+    <section id="login-view" class="login-layout" hidden>
+      <div class="login-story"><p class="eyebrow">A LITTLE CLARITY. A NEXT STEP.</p><h1>Your next role,<br>a little closer.</h1><p class="intro">A thoughtful shortlist, built around your experience. Explore opportunities and take the next step.</p><div class="journey"><div><span>01</span><p>Explore the shortlist<small>Opportunities across five states.</small></p></div><div><span>02</span><p>Choose what feels right<small>Save the roles that interest you.</small></p></div><div><span>03</span><p>Take the next step<small>Visit the employer and apply.</small></p></div></div></div>
+      <form id="login-form" class="login-card"><div class="card-symbol">↗</div><p class="eyebrow">YOUR PRIVATE SPACE</p><h2>Welcome, Arun.</h2><p>Enter the access passphrase shared with you to open your shortlist.</p><label for="password">Access passphrase</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256" placeholder="Enter your passphrase"><p id="login-error" role="alert" class="error" hidden></p><button class="button primary" type="submit">Open my shortlist <span>→</span></button><p class="quiet login-note">Your choices stay saved here.</p></form>
+    </section>
+    <section id="workspace" hidden>
+      <div class="hero"><div><p class="eyebrow">YOUR NEXT CHAPTER STARTS HERE</p><h1>A considered next step.</h1><p class="intro">Explore the roles. Choose what feels right.<br>Find opportunities that match your experience.</p></div><div class="hero-note"><span class="note-mark">↗</span><p>Small steps.<br>Real possibilities.</p><span class="quiet">Built around your experience.</span></div></div>
+      <div class="stats" aria-label="Shortlist overview"><div><strong id="total-count">—</strong><span>curated roles</span></div><div><strong>05</strong><span>states to explore</span></div><div><strong id="ready-count">00</strong><span id="ready-label">roles of interest</span></div><div class="stats-message"><span class="dot"></span><p>Your progress is saved<br><span>Pick up wherever you left off.</span></p></div></div>
+      <div id="service-note" class="notice" hidden>Explore openings and save your choices. Resume preparation will be available later.</div>
+      <section class="shortlist" aria-labelledby="shortlist-heading">
+        <div class="section-heading"><div><p class="eyebrow">FIND YOUR FIT</p><h2 id="shortlist-heading">Your shortlist <span id="result-count" class="count-badge"></span></h2></div><label class="search"><span aria-hidden="true">⌕</span><span class="sr-only">Search job roles, companies or locations</span><input id="search" type="search" placeholder="Search roles, companies, cities…"></label></div>
+        <div class="filters"><div id="state-filters" class="state-filters" aria-label="Filter by state"></div><label class="status-filter">Show <select id="status-filter"><option value="all">All roles</option><option value="new">To explore</option><option value="interested">Interested</option><option value="ready">Resume ready</option><option value="skipped">Skipped</option></select></label></div>
+        <p id="workspace-error" class="error" role="alert" hidden></p>
+        <div class="table-wrap"><table><thead><tr><th scope="col">JOB ROLE</th><th scope="col">APPLICATION LINK</th><th scope="col">LOCATION</th><th scope="col">YOUR NEXT STEP</th></tr></thead><tbody id="job-rows"></tbody></table></div>
+        <div id="empty-state" class="empty-state" hidden><span>⌕</span><h3>No matching roles</h3><p>Try a different state or a broader search.</p><button id="reset-filters" class="button secondary">Reset filters</button></div>
+        <div class="table-footer"><p>Listings checked <span id="checked-date">18 Oct 2026</span>. Confirm availability on the employer's website.</p><span>Choose a role. Take a step. ↗</span></div>
+      </section>
+      <div class="how-it-works"><p id="apply-help">Apply saves your interest and opens the employer's application page.</p><p><b>Skip</b> saves the role for later. You can restore it from the Skipped filter.</p></div>
+    </section>
+  </main>
+  <footer class="page-footer"><span>NEXT CHAPTER</span><p>Built for your next move.</p></footer>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="resume-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><p class="eyebrow">ONE ROLE. YOUR EXPERIENCE.</p><button id="close-dialog" class="icon-button" aria-label="Close role details">×</button></div><div id="dialog-content"></div></dialog>
+</body>
+</html>
