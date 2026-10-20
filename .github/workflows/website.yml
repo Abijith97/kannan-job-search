@@ -57,6 +57,11 @@ jobs:
             if [ -z "${!name}" ]; then echo "::error::Missing repository secret: $name"; exit 1; fi
           done
           if [ "${#APP_ACCESS_PASSWORD}" -lt 16 ]; then echo '::error::APP_ACCESS_PASSWORD must contain at least 16 characters'; exit 1; fi
+      - name: Ensure the free workers.dev address exists
+        run: node scripts/ensure-workers-domain.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy website and runtime secrets
         id: publish
         uses: cloudflare/wrangler-action@v4
