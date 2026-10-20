@@ -115,7 +115,9 @@ export async function assessJobs({ jobs, profile, now, apiKey, fetcher = fetch }
     matched_evidence_ids: { type: 'array', items: { type: 'string', enum: [...profile.evidence.keys()] } },
     requirements_to_check: { type: 'array', items: string }
   });
-  const schema = object({ assessments: object(Object.fromEntries(jobs.map(job => [job.id, decision]))) });
+  // Reuse the definition rather than duplicating the evidence enum 30 times;
+  // the API limits total enum values across a strict schema.
+  const schema = { ...object({ assessments: object(Object.fromEntries(jobs.map(job => [job.id, { $ref: '#/$defs/decision' }]))) }), $defs: { decision } };
   let response;
   try {
     response = await fetcher('https://api.openai.com/v1/responses', {
