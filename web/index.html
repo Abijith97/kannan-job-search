@@ -9,6 +9,7 @@
   <title>Next Chapter · Arun's job search</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./enhancements.css">
   <script type="module" src="./app.js"></script>
 </head>
 <body>
@@ -29,11 +30,11 @@
       <div id="service-note" class="notice" hidden>Explore openings and save your choices. Resume preparation will be available later.</div>
       <section class="shortlist" aria-labelledby="shortlist-heading">
         <div class="section-heading"><div><p class="eyebrow">FIND YOUR FIT</p><h2 id="shortlist-heading">Your shortlist <span id="result-count" class="count-badge"></span></h2></div><label class="search"><span aria-hidden="true">⌕</span><span class="sr-only">Search job roles, companies or locations</span><input id="search" type="search" placeholder="Search roles, companies, cities…"></label></div>
-        <div class="filters"><div id="state-filters" class="state-filters" aria-label="Filter by state"></div><label class="status-filter">Show <select id="status-filter"><option value="all">All roles</option><option value="new">To explore</option><option value="interested">Interested</option><option value="ready">Resume ready</option><option value="skipped">Skipped</option></select></label></div>
+        <div class="filters"><div id="state-filters" class="state-filters" aria-label="Filter by state"></div><div class="table-controls"><label class="status-filter">Sort <select id="sort-order"><option value="newest">Newest published</option><option value="oldest">Oldest published</option></select></label><label class="status-filter">Show <select id="status-filter"><option value="all">All roles</option><option value="recent">New listings</option><option value="new">To explore</option><option value="interested">Interested</option><option value="ready">Resume ready</option><option value="skipped">Skipped</option></select></label></div></div>
         <p id="workspace-error" class="error" role="alert" hidden></p>
-        <div class="table-wrap"><table><thead><tr><th scope="col">JOB ROLE</th><th scope="col">APPLICATION LINK</th><th scope="col">LOCATION</th><th scope="col">YOUR NEXT STEP</th></tr></thead><tbody id="job-rows"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">JOB ROLE</th><th scope="col">APPLICATION LINK</th><th scope="col">LOCATION</th><th scope="col">PUBLISHED</th><th scope="col">YOUR NEXT STEP</th></tr></thead><tbody id="job-rows"></tbody></table></div>
         <div id="empty-state" class="empty-state" hidden><span>⌕</span><h3>No matching roles</h3><p>Try a different state or a broader search.</p><button id="reset-filters" class="button secondary">Reset filters</button></div>
-        <div class="table-footer"><p>Listings checked <span id="checked-date">18 Oct 2026</span>. Confirm availability on the employer's website.</p><span>Choose a role. Take a step. ↗</span></div>
+        <div class="table-footer"><p><span id="refresh-info">Nightly checks at 2:00 a.m. IST.</span><br>“New” means discovered in the last seven days. Missing publication dates are shown last.</p><span>Choose a role. Take a step. ↗</span></div>
       </section>
       <div class="how-it-works"><p id="apply-help">Apply saves your interest and opens the employer's application page.</p><p><b>Skip</b> saves the role for later. You can restore it from the Skipped filter.</p></div>
     </section>

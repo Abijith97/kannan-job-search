@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { listingKey } from '../src/listings.mjs';
 
 export const states = ['Tamil Nadu', 'Kerala', 'Karnataka', 'Telangana', 'Maharashtra'];
-export async function loadCatalog(root) {
+export async function loadCatalog(root, { seedOnly = false } = {}) {
   const details = JSON.parse(await readFile(resolve(root, 'data/job-details.json'), 'utf8'));
   const catalog = new Map();
   for (const state of states) {
@@ -17,13 +18,22 @@ export async function loadCatalog(root) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(checked)) throw new Error(`Invalid checked date: ${id}`);
       const existing = catalog.get(id);
       if (existing && (existing.url !== url || existing.title !== title)) throw new Error(`Conflicting shared listing: ${id}`);
-      const job = existing || { id, company, title, url, checked, role, locations: [], ...details[id] };
+      const sourceId = ({ SM: 'santamonica', ZOLVE: 'zolve', ENV: 'envision', IDP: 'idp', COK: 'cokonet', LEAP: 'leap', VIAVIFA: 'viavifa' })[id.split('-')[0]];
+      const job = existing || { id, company, title, url, checked, role, locations: [], ...details[id], sourceId, publishedAt: null, firstSeenAt: '2026-10-18T00:00:00.000Z', isSeed: true, availability: 'unknown' };
       job.locations.push({ state, label: location });
       catalog.set(id, job);
     }
   }
   for (const id of Object.keys(details)) if (!catalog.has(id)) throw new Error(`Stale job details: ${id}`);
-  return [...catalog.values()];
+  const seeds = [...catalog.values()];
+  if (seedOnly) return seeds;
+  const snapshot = JSON.parse(await readFile(resolve(root, 'data/job-snapshot.json'), 'utf8'));
+  const merged = new Map(seeds.map(job => [job.id, job]));
+  for (const job of snapshot.jobs || []) {
+    if ([...merged.values()].some(existing => existing.id !== job.id && listingKey(existing) === listingKey(job))) continue;
+    merged.set(job.id, { ...merged.get(job.id), ...job });
+  }
+  return [...merged.values()];
 }
 
 export function parseResume(markdown) {

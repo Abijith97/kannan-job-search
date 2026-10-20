@@ -3,12 +3,18 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import worker, { JobWorkspace } from '../src/worker.mjs';
-import { memoryState } from '../tests/helpers.mjs';
+import { memoryState, openAIResponse } from '../tests/helpers.mjs';
+import { jobs } from '../.generated/data.mjs';
 
 export async function startPreview() {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (url, options) => { if (String(url).startsWith('https://api.openai.com/')) throw new Error('OpenAI is disabled for this website preview.'); return originalFetch(url, options); };
-  const env = { APP_ACCESS_PASSWORD: 'preview-only-private-passphrase', RESUME_GENERATION_ENABLED: 'false' };
+  globalThis.fetch = async (url, options) => {
+    if (String(url).startsWith('https://api.openai.com/')) return openAIResponse();
+    const job = jobs.find(item => item.url === String(url));
+    if (job) return new Response(`<h1>${job.title}</h1><main><p>Develop education partnerships, research opportunities, build relationships and manage student enrolment pipelines. Strong communication and business development experience required.</p></main>`);
+    return originalFetch(url, options);
+  };
+  const env = { APP_ACCESS_PASSWORD: 'preview-only-private-passphrase', RESUME_GENERATION_ENABLED: 'true', OPENAI_API_KEY: 'local-test-placeholder-not-a-real-key', OPENAI_MODEL: 'gpt-4.1-mini' };
   const workspace = new JobWorkspace(memoryState(), env);
   env.WORKSPACE = { idFromName: value => value, get: () => workspace };
   const root = resolve('dist');
@@ -18,7 +24,7 @@ export async function startPreview() {
     if (!file.startsWith(root + sep)) return new Response('Not found', { status: 404 });
     try {
       let bytes = await readFile(file);
-      return new Response(bytes, { headers: { 'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' })[extname(file)] || 'application/octet-stream' } });
+      return new Response(bytes, { headers: { 'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' })[extname(file)] || 'application/octet-stream' } });
     } catch { return new Response('Not found', { status: 404 }); }
   } };
   const server = createServer(async (req, res) => {

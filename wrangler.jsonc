@@ -6,6 +6,6 @@
   "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": true },
   "durable_objects": { "bindings": [{ "name": "WORKSPACE", "class_name": "JobWorkspace" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["JobWorkspace"] }],
-  "vars": { "RESUME_GENERATION_ENABLED": "false", "OPENAI_MODEL": "gpt-4.1-mini", "DAILY_GENERATION_LIMIT": "20" },
+  "vars": { "RESUME_GENERATION_ENABLED": "true", "OPENAI_MODEL": "gpt-4.1-mini", "DAILY_GENERATION_LIMIT": "20" },
   "observability": { "enabled": false }
 }

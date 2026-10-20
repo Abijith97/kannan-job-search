@@ -15,7 +15,7 @@ async function login(workspace) {
   assert.equal(response.status, 200); return response.headers.get('set-cookie').split(';')[0];
 }
 test('catalog contains unique roles across the five requested states', () => {
-  assert.equal(jobs.length, 17);
+  assert.ok(jobs.length >= 17);
   assert.equal(new Set(jobs.flatMap(job => job.locations.map(x => x.state))).size, 5);
   assert.equal(new Set(jobs.map(job => job.id)).size, jobs.length);
   assert.ok(jobs.every(job => new URL(job.url).protocol === 'https:'));
@@ -25,7 +25,7 @@ test('catalog requires authentication and generation is disabled', async () => {
   assert.equal((await workspace.fetch(request('/api/jobs'))).status, 401);
   const cookie = await login(workspace);
   const data = await (await workspace.fetch(request('/api/jobs', { cookie }))).json();
-  assert.equal(data.jobs.length, 17); assert.equal(data.generationAvailable, false);
+  assert.equal(data.jobs.length, jobs.filter(job => job.availability !== 'closed').length); assert.equal(data.generationAvailable, false);
 });
 test('saved interest, skip and restore persist', async () => {
   const workspace = setup(); const cookie = await login(workspace);

@@ -1,6 +1,9 @@
-import { jobs, profile, dataVersion } from '../.generated/data.mjs';
+import { jobs, profile, dataVersion, refreshInfo, sourceHosts } from '../.generated/data.mjs';
 import { AppError, curateResume, resumeText } from './curation.mjs';
 import { makePdf } from './pdf.mjs';
+import { makeDocx } from './docx.mjs';
+import { fetchOfficial, jobDescription } from './listings.mjs';
+import { sortJobs, isNewListing } from '../web/jobs.mjs';
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers } });
 const sha = async text => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -17,7 +20,7 @@ async function body(request) {
   while (true) {
     const { value, done } = await reader.read(); if (done) break;
     length += value.byteLength;
-    if (length > 24000) { await reader.cancel(); throw new AppError('Job details are too long. Keep them below 16,000 characters.', 413); }
+    if (length > 72000) { await reader.cancel(); throw new AppError('Job details are too long. Keep them below 16,000 characters.', 413); }
     chunks.push(value);
   }
   const bytes = new Uint8Array(length); let offset = 0;
@@ -86,8 +89,14 @@ export class JobWorkspace {
   async generate(job, input) {
     if (this.env.RESUME_GENERATION_ENABLED !== 'true') throw new AppError('Resume preparation is not enabled yet.', 503);
     if (typeof input?.description !== 'string' || input.description.length > 16000) throw new AppError('Job details must be text under 16,000 characters.');
-    const description = input.description.trim();
-    if (description && description.length < 80) throw new AppError('Paste at least 80 characters of job details, or leave the field empty to use the saved role summary.');
+    let description = input.description.trim();
+    if (description && description.length < 40) throw new AppError('Paste at least 40 characters of the current job description.');
+    let source = 'Pasted job description';
+    if (!description) {
+      const detail = await this.details(job);
+      description = detail.description;
+      source = 'Current employer job description';
+    }
     const sourceHash = await sha(`${dataVersion}:${this.env.OPENAI_MODEL}:${job.id}:${description}`);
     const cached = await this.state.storage.get(`resume:${job.id}`);
     if (cached?.sourceHash === sourceHash) return json(cached);
@@ -97,11 +106,28 @@ export class JobWorkspace {
     try {
       await this.reserveGeneration();
       const result = await curateResume({ profile, job, description, apiKey: this.env.OPENAI_API_KEY, model: this.env.OPENAI_MODEL || 'gpt-4.1-mini' });
-      const record = { ...result, jobId: job.id, company: job.company, title: job.title, createdAt: new Date().toISOString(), source: description ? 'Pasted job description' : 'Saved researched role summary', sourceHash, dataVersion };
+      const record = { ...result, jobId: job.id, company: job.company, title: job.title, createdAt: new Date().toISOString(), source, jobUrl: job.url, sourceHash, dataVersion };
       await this.state.storage.put(`resume:${job.id}`, record);
       await this.state.storage.put(`decision:${job.id}`, 'new');
       return json(record);
     } finally { this.pending = null; }
+  }
+
+  async details(job) {
+    if (job.availability === 'closed') throw new AppError('This listing is marked closed. Choose another role.', 410);
+    const cached = await this.state.storage.get(`description:${job.id}`);
+    if (cached?.fetchedAt > Date.now() - 6 * 3600000 && cached.url === job.url) return cached;
+    try {
+      const html = await fetchOfficial(job.url, sourceHosts);
+      const detail = jobDescription(html, job);
+      if (detail.availability === 'closed') throw new AppError('The employer has marked this listing closed.', 410);
+      const result = { ...detail, fetchedAt: Date.now(), url: job.url };
+      await this.state.storage.put(`description:${job.id}`, result);
+      return result;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError('The employer’s job description could not be read. Paste the current job description below to continue.', 422);
+    }
   }
 
   async route(request) {
@@ -115,12 +141,13 @@ export class JobWorkspace {
     if (url.pathname === '/api/logout' && request.method === 'POST') { await this.state.storage.delete(session); return json({ ok: true }, 200, { 'Set-Cookie': cookie('', url, 0) }); }
     if (url.pathname === '/api/jobs' && request.method === 'GET') {
       const [decisions, resumes] = await Promise.all([this.state.storage.list({ prefix: 'decision:' }), this.state.storage.list({ prefix: 'resume:' })]);
-      return json({ jobs: jobs.map(job => ({ ...job, status: decisions.get(`decision:${job.id}`) === 'skipped' ? 'skipped' : resumes.has(`resume:${job.id}`) ? 'ready' : decisions.get(`decision:${job.id}`) === 'interested' ? 'interested' : 'new', hasResume: resumes.has(`resume:${job.id}`), resumeOutdated: resumes.has(`resume:${job.id}`) && resumes.get(`resume:${job.id}`).dataVersion !== dataVersion })), generationAvailable: this.env.RESUME_GENERATION_ENABLED === 'true' && secretReady(this.env.OPENAI_API_KEY) });
+      return json({ jobs: sortJobs(jobs.filter(job => job.availability !== 'closed')).map(job => ({ ...job, isNew: isNewListing(job), status: decisions.get(`decision:${job.id}`) === 'skipped' ? 'skipped' : resumes.has(`resume:${job.id}`) ? 'ready' : decisions.get(`decision:${job.id}`) === 'interested' ? 'interested' : 'new', hasResume: resumes.has(`resume:${job.id}`), resumeOutdated: resumes.has(`resume:${job.id}`) && resumes.get(`resume:${job.id}`).dataVersion !== dataVersion })), generationAvailable: this.env.RESUME_GENERATION_ENABLED === 'true' && secretReady(this.env.OPENAI_API_KEY), refreshInfo });
     }
-    const match = url.pathname.match(/^\/api\/jobs\/([A-Z0-9-]+)\/(decision|resume|download)$/);
+    const match = url.pathname.match(/^\/api\/jobs\/([A-Z0-9-]+)\/(decision|resume|download|details)$/);
     const job = match && jobs.find(x => x.id === match[1]);
     if (!job) throw new AppError('Job not found.', 404);
     const action = match[2];
+    if (action === 'details' && request.method === 'GET') return json(await this.details(job));
     if (action === 'decision' && request.method === 'POST') {
       const input = await body(request);
       if (!['new', 'skipped', 'interested'].includes(input?.decision)) throw new AppError('Invalid job decision.');
@@ -132,11 +159,11 @@ export class JobWorkspace {
     if (!record) throw new AppError('Prepare a resume for this job first.', 404);
     if (action === 'resume' && request.method === 'GET') return json(record);
     if (action === 'download' && request.method === 'GET') {
-      const format = url.searchParams.get('format') || 'pdf';
-      if (!['pdf', 'txt'].includes(format)) throw new AppError('Unsupported download format.');
-      const content = format === 'pdf' ? await makePdf(record.resume) : resumeText(record.resume);
+      const format = url.searchParams.get('format') || 'docx';
+      if (!['docx', 'pdf', 'txt'].includes(format)) throw new AppError('Unsupported download format.');
+      const content = format === 'docx' ? await makeDocx(record.resume) : format === 'pdf' ? await makePdf(record.resume) : resumeText(record.resume);
       const filename = `Arun_Kannan_${job.company.replace(/[^a-zA-Z0-9]+/g, '_')}_${job.id}.${format}`;
-      return new Response(content, { headers: { 'Content-Type': format === 'pdf' ? 'application/pdf' : 'text/plain; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'no-store' } });
+      return new Response(content, { headers: { 'Content-Type': format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : format === 'pdf' ? 'application/pdf' : 'text/plain; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'no-store' } });
     }
     throw new AppError('Method not allowed.', 405);
   }

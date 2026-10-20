@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      verify_resume:
+        description: 'Verify one real resume and Word download (uses API credit if not cached)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -28,6 +33,19 @@ jobs:
       - run: npm run test:website
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - name: Render the editable Word resume for layout checks
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libreoffice-writer poppler-utils fonts-crosextra-carlito
+          python -m pip install pdf2image
+          python .github/qa/render_docx.py tmp/example.docx --output_dir tmp/docx-qa --emit_pdf
+      - uses: actions/upload-artifact@v6
+        with:
+          name: website-layout-preview
+          path: |
+            tmp/screenshots/
+            tmp/docx-qa/
+          retention-days: 1
       - run: npm run check:deploy
         env:
           WRANGLER_SEND_METRICS: 'false'
@@ -51,9 +69,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           APP_ACCESS_PASSWORD: ${{ secrets.APP_ACCESS_PASSWORD }}
         run: |
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID APP_ACCESS_PASSWORD; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID OPENAI_API_KEY APP_ACCESS_PASSWORD; do
             if [ -z "${!name}" ]; then echo "::error::Missing repository secret: $name"; exit 1; fi
           done
           if [ "${#APP_ACCESS_PASSWORD}" -lt 16 ]; then echo '::error::APP_ACCESS_PASSWORD must contain at least 16 characters'; exit 1; fi
@@ -70,8 +89,10 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
           secrets: |
+            OPENAI_API_KEY
             APP_ACCESS_PASSWORD
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           APP_ACCESS_PASSWORD: ${{ secrets.APP_ACCESS_PASSWORD }}
           WRANGLER_SEND_METRICS: 'false'
       - name: Check the live website
@@ -79,6 +100,7 @@ jobs:
         env:
           SITE_URL: ${{ steps.publish.outputs.deployment-url }}
           APP_ACCESS_PASSWORD: ${{ secrets.APP_ACCESS_PASSWORD }}
+          CHECK_RESUME: ${{ inputs.verify_resume && 'true' || 'false' }}
       - name: Publish website link
         env:
           SITE_URL: ${{ steps.publish.outputs.deployment-url }}

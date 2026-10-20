@@ -1,0 +1,9 @@
+[
+  { "id": "idp", "company": "IDP Education India Private Ltd", "type": "idp", "url": "https://jobs.idp.com/go/India/7862310/" },
+  { "id": "envision", "company": "Envision", "type": "envision", "url": "https://envisionedu.in/careers/" },
+  { "id": "santamonica", "company": "Santamonica Study Abroad", "type": "santamonica", "url": "https://santamonicaedu.in/career/" },
+  { "id": "zolve", "company": "Zolve", "type": "freshteam", "url": "https://zolve.freshteam.com/jobs" },
+  { "id": "leap", "company": "Leap", "type": "freshteam", "url": "https://leapfinance.freshteam.com/jobs" },
+  { "id": "viavifa", "company": "VIAVIFA Global Immigration Services", "type": "viavifa", "url": "https://viavifa.com/careers" },
+  { "id": "cokonet", "company": "Cokonet Overseas", "type": "cokonet", "url": "https://cokonetoverseas.com/careers" }
+]
