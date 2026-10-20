@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { profile as sourceProfile } from '../.generated/data.mjs';
-import { discoveryProfile, searchState, validateCandidate, inspectCandidate, discoverProfileJobs, assessJobs, POLICY_VERSION } from '../scripts/profile-search.mjs';
+import { discoveryProfile, searchState, validateCandidate, inspectCandidate, discoverProfileJobs, assessJobs, POLICY_VERSION, ASSESSMENT_VERSION } from '../scripts/profile-search.mjs';
 import { publicIPv4, publicJobUrl } from '../scripts/public-web.mjs';
 import { targetStates } from '../src/listings.mjs';
 
@@ -15,7 +15,7 @@ const description = '<p>Build and onboard channel partners for education program
 const html = `<h1>Channel Partnerships Associate</h1><script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: candidate.title, hiringOrganization: { name: candidate.company }, description, datePosted: '2026-10-18', jobLocation: { address: { addressLocality: 'Chennai', addressRegion: 'Tamil Nadu', addressCountry: 'IN' } } })}</script>`;
 const completed = (value, extra = []) => new Response(JSON.stringify({ status: 'completed', output: [...extra, { type: 'message', content: [{ type: 'output_text', text: JSON.stringify(value) }] }], usage: { input_tokens: 100, output_tokens: 50 } }));
 const searchResponse = (jobs = [candidate]) => completed({ jobs }, [{ type: 'web_search_call', status: 'completed', action: { type: 'search', sources: [{ url }] } }]);
-const assessmentResponse = (ids, suitable = true) => completed({ assessments: ids.map(id => ({ job_id: id, suitable, fit_score: suitable ? 85 : 30, reason: candidate.fit_reason, matched_evidence_ids: [factId], requirements_to_check: candidate.requirements_to_check })) });
+const assessmentResponse = (ids, suitable = true) => completed({ assessments: Object.fromEntries(ids.map(id => [id, { suitable, fit_score: suitable ? 85 : 30, reason: candidate.fit_reason, matched_evidence_ids: [factId], requirements_to_check: candidate.requirements_to_check }])) });
 
 test('search reads the real resume and researched role families but excludes contact details', () => {
   const serialized = JSON.stringify(profile.facts);
@@ -60,12 +60,13 @@ test('full job assessment rejects hallucinated evidence, omissions and duplicate
   const base = { jobs: [job], profile, now, apiKey: 'fake' };
   const good = await assessJobs({ ...base, fetcher: async (_, options) => {
     const request = JSON.parse(options.body); assert.equal(request.tools, undefined); assert.ok(request.input.includes('Own partner acquisition'));
+    assert.deepEqual(request.text.format.schema.properties.assessments.required, ['WEB-1']);
     return assessmentResponse(['WEB-1']);
   } });
   assert.equal(good.jobs[0].profileMatch.score, 85);
   assert.equal((await assessJobs({ ...base, fetcher: async () => assessmentResponse(['WEB-1'], false) })).jobs.length, 0);
   await assert.rejects(assessJobs({ ...base, fetcher: async () => assessmentResponse([]) }), /exactly once/);
-  await assert.rejects(assessJobs({ ...base, fetcher: async () => completed({ assessments: [{ job_id: 'WEB-1', suitable: true, fit_score: 85, reason: 'Invented fit', matched_evidence_ids: ['fabricated'], requirements_to_check: [] }] }) }), /evidence/);
+  await assert.rejects(assessJobs({ ...base, fetcher: async () => completed({ assessments: { 'WEB-1': { suitable: true, fit_score: 85, reason: 'Invented fit', matched_evidence_ids: ['fabricated'], requirements_to_check: [] } } }) }), /evidence/);
 });
 test('nightly pipeline covers all five states, verifies pages, then assesses before publishing', async () => {
   let searches = 0, assessments = 0, checked = 0; const progress = [];
@@ -105,6 +106,15 @@ test('failed final assessment stages results for recovery, without publishing pr
     return data.tools ? searchResponse(JSON.parse(data.input).state === 'Tamil Nadu' ? [candidate] : []) : new Response('Unavailable', { status: 503 });
   }, pageFetcher: async () => ({ html, url }) });
   assert.equal(result.info.phase, 'failed'); assert.equal(result.jobs.length, 0); assert.equal(result.info.pendingJobs.length, 1);
+  const second = await discoverProfileJobs({ profile, previous: result.info, existingJobs: [], now, apiKey: 'fake', fetcher: async () => { throw new Error('Must not repeat a failed batch in the same day'); } });
+  assert.equal(second.info.phase, 'pending'); assert.equal(second.info.pendingJobs.length, 1);
+  let calls = 0;
+  const repaired = await discoverProfileJobs({ profile, previous: { ...result.info, assessment: { ...result.info.assessment, version: 'older-broken-format' } }, existingJobs: [], now, apiKey: 'fake', fetcher: async (_, options) => {
+    const input = JSON.parse(options.body); assert.equal(input.tools, undefined); calls++;
+    return assessmentResponse(JSON.parse(input.input).vacancies.map(job => job.id));
+  } });
+  assert.equal(calls, 1, 'A format repair should recover the staged jobs without repeating the five paid searches');
+  assert.equal(repaired.info.phase, 'complete'); assert.equal(repaired.jobs.length, 1); assert.equal(repaired.info.assessment.version, ASSESSMENT_VERSION);
 });
 test('public job fetch guard rejects metadata, local, private and reserved addresses', () => {
   for (const address of ['127.0.0.1', '10.0.0.1', '172.16.1.1', '192.168.1.1', '169.254.169.254', '100.64.1.1', '198.18.1.1', '224.0.0.1', '::1']) assert.equal(publicIPv4(address), false, address);
