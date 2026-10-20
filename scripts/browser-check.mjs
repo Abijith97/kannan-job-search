@@ -17,12 +17,21 @@ try {
   const page = await browser.newPage({ viewport: { width: 1365, height: 1000 }, acceptDownloads: true });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(preview.url);
+  await page.getByRole('heading', { name: 'How to use this website', exact: true }).waitFor();
+  assert.equal(await page.locator('.usage-guide li').count(), 7);
+  await mkdir('tmp/screenshots', { recursive: true });
+  await page.screenshot({ path: 'tmp/screenshots/homepage-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: 'tmp/screenshots/homepage-mobile.png', fullPage: true });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Mobile homepage overflows horizontally');
+  await page.setViewportSize({ width: 1365, height: 1000 });
   await page.getByLabel('Access passphrase').fill('wrong');
   await page.getByRole('button', { name: 'Open my shortlist' }).click();
   await page.getByText('That passphrase is not correct.').waitFor();
   await page.getByLabel('Access passphrase').fill(preview.password);
   await page.getByRole('button', { name: 'Open my shortlist' }).click();
   await page.locator('#job-rows tr').first().waitFor();
+  assert.equal(await page.locator('.usage-guide').isVisible(), false);
   const active = jobs.filter(job => job.availability !== 'closed');
   assert.equal(await page.locator('#job-rows tr').count(), active.length);
   assert.equal(await page.locator('.new-badge').count(), active.filter(job => isNewListing(job)).length);
@@ -76,6 +85,7 @@ try {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Mobile page overflows horizontally');
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.getByRole('heading', { name: 'Welcome, Arun.' }).waitFor();
+  await page.getByRole('heading', { name: 'How to use this website', exact: true }).waitFor();
   assert.deepEqual(errors, []);
   console.log('Website checks passed: sign-in, state filters, publication sorting, New badges, saved skip/restore, automatic Word download, saved resume, employer links, mobile layout and logout. OpenAI and employer responses were mocked.');
 } finally { await browser?.close(); await preview.close(); }
