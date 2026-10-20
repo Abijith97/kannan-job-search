@@ -65,14 +65,19 @@ for (let start = 0; start < rechecks.length; start += 3) {
   for (const result of results) if (result.status === 'rejected') throw result.reason;
 }
 let snapshot;
+// Every NEW role, including one found by an original employer scraper, must
+// pass the same full-description profile assessment before it is published.
+const baseline = new Set([...seeds, ...(previous.jobs || [])].map(listingKey));
+const existingUpdates = discovered.filter(job => baseline.has(listingKey(job)));
+const verifiedNewJobs = discovered.filter(job => !baseline.has(listingKey(job))).map(job => ({ ...job, discoveryMethod: 'profile-assessed-employer', verification: 'page-verified', discoverySourceUrl: job.url, searchState: job.locations[0].state }));
 async function persist(discovery, searchJobs) {
-  const jobs = mergeSnapshot(previous, seeds, [...discovered, ...(discovery.phase === 'complete' ? searchJobs : [])], success, now);
+  const jobs = mergeSnapshot(previous, seeds, [...existingUpdates, ...(discovery.phase === 'complete' ? searchJobs : [])], success, now);
   for (const job of jobs) if (closedIds.has(job.id)) { job.availability = 'closed'; job.checked = now.slice(0, 10); }
   snapshot = { updatedAt: now, jobs, sources: sourceResults, discovery: { ...discovery, pendingJobs: discovery.phase === 'complete' ? [] : searchJobs.length ? searchJobs : discovery.pendingJobs || [] } };
   await writeFile('data/job-snapshot.json.tmp', JSON.stringify(snapshot, null, 2) + '\n');
   await rename('data/job-snapshot.json.tmp', 'data/job-snapshot.json');
 }
-const result = await discoverProfileJobs({ profile, previous: previous.discovery, existingJobs: mergeSnapshot(previous, seeds, discovered, success, now), now, apiKey: process.env.OPENAI_API_KEY, onProgress: persist });
+const result = await discoverProfileJobs({ profile, previous: previous.discovery, existingJobs: mergeSnapshot(previous, seeds, existingUpdates, success, now), verifiedJobs: verifiedNewJobs, now, apiKey: process.env.OPENAI_API_KEY, onProgress: persist });
 await persist(result.info, result.jobs);
 const { jobs } = snapshot;
 for (const state of result.info.states) console.log(`Profile search — ${state.state}: ${state.status}; ${state.acceptedCount || 0} new verified matches${state.message ? `; ${state.message}` : ''}`);

@@ -94,6 +94,17 @@ test('manual reruns reuse daily search ledger without API spending and preserve 
   await discoverProfileJobs({ profile, previous: { ...previous, states: previous.states.slice(1) }, existingJobs: [], now, apiKey: 'fake', fetcher: async () => searchResponse([]), onProgress: async info => { first ||= structuredClone(info); } });
   assert.equal(first.states.length, 5, 'Checkpoint must retain already completed later states if interrupted');
 });
+test('new roles on configured employer career pages pass the same assessment rather than publishing by keywords', async () => {
+  const known = { id: 'AUTO-NEW', title: candidate.title, company: candidate.company, url: 'https://careers.acme.com/careers', locations: [{ state: 'Tamil Nadu', label: 'Chennai' }], description, searchState: 'Tamil Nadu', discoveryMethod: 'profile-assessed-employer', verification: 'page-verified', discoverySourceUrl: 'https://careers.acme.com/careers' };
+  let assessed = 0;
+  const run = suitable => discoverProfileJobs({ profile, previous: null, existingJobs: [], verifiedJobs: [known], now, apiKey: 'fake', fetcher: async (_, options) => {
+    const data = JSON.parse(options.body);
+    if (data.tools) return searchResponse([]);
+    assessed++; return assessmentResponse(['AUTO-NEW'], suitable);
+  } });
+  const accepted = await run(true); assert.equal(accepted.jobs.length, 1); assert.equal(accepted.jobs[0].profileMatch.score, 85);
+  const rejected = await run(false); assert.equal(rejected.jobs.length, 0); assert.equal(assessed, 2);
+});
 test('authentication failure stops further paid requests and preserves existing jobs', async () => {
   let calls = 0;
   const result = await discoverProfileJobs({ profile, previous: null, existingJobs: [], now, apiKey: 'fake', fetcher: async () => { calls++; return new Response(JSON.stringify({ error: { message: 'Do not expose a secret here' } }), { status: 401 }); } });

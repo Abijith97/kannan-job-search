@@ -72,7 +72,7 @@ export async function searchState({ state, profile, existingJobs, now, apiKey, f
   return { jobs: data.jobs, sourceUrls, usage: { requests: 1, webSearchCalls: calls.length, inputTokens: output.usage?.input_tokens || 0, outputTokens: output.usage?.output_tokens || 0 } };
 }
 
-export function validateCandidate(candidate, state, profile, sourceUrls) {
+export function validateCandidate(candidate, state, profile, sourceUrls, { allowCareerPage = false } = {}) {
   if (!candidate || !Number.isInteger(candidate.fit_score) || candidate.fit_score < 65 || candidate.fit_score > 100) throw new Error('Insufficient profile match.');
   for (const field of ['title', 'company', 'location', 'fit_reason']) if (typeof candidate[field] !== 'string' || !candidate[field].trim() || candidate[field].length > (field === 'fit_reason' ? 900 : 250)) throw new Error('Invalid job assessment.');
   if (!Array.isArray(candidate.matched_evidence_ids) || !candidate.matched_evidence_ids.length || candidate.matched_evidence_ids.length > 6 || candidate.matched_evidence_ids.some(id => !profile.evidence.has(id))) throw new Error('Unrecognized resume evidence.');
@@ -81,7 +81,7 @@ export function validateCandidate(candidate, state, profile, sourceUrls) {
   if (!sourceUrls.has(url)) throw new Error('Job link was not found by the web search.');
   const locations = inferLocations(candidate.location).filter(location => location.state === state);
   if (!locations.length) throw new Error('Job location is outside the searched state.');
-  if (/\/(?:jobs|careers?|search|results)\/?$/i.test(new URL(url).pathname)) throw new Error('A specific vacancy is required.');
+  if (!allowCareerPage && /\/(?:jobs|careers?|search|results)\/?$/i.test(new URL(url).pathname)) throw new Error('A specific vacancy is required.');
   return { ...candidate, url, locations };
 }
 export function inspectCandidate(page, candidate, state, now) {
@@ -144,7 +144,7 @@ export async function assessJobs({ jobs, profile, now, apiKey, fetcher = fetch }
     // Older postings can remain in the original shortlist, but the broad
     // discovery feed adds recent postings or active jobs with no supplied date.
     if (job.publishedAt && Date.parse(job.publishedAt) < Date.parse(now) - 30 * 86400000) continue;
-    validateCandidate({ ...job, location: job.locations.map(location => location.label).join('; '), fit_score: result.fit_score, fit_reason: result.reason, matched_evidence_ids: result.matched_evidence_ids, requirements_to_check: result.requirements_to_check }, job.searchState, profile, new Set([canonicalUrl(job.url)]));
+    validateCandidate({ ...job, location: job.searchState, fit_score: result.fit_score, fit_reason: result.reason, matched_evidence_ids: result.matched_evidence_ids, requirements_to_check: result.requirements_to_check }, job.searchState, profile, new Set([canonicalUrl(job.url)]), { allowCareerPage: job.discoveryMethod === 'profile-assessed-employer' });
     if (!result.matched_evidence_ids.some(id => /^experience-\d+-fact-\d+$/.test(id))) throw new DiscoveryError('An accepted match did not cite work experience.');
     const evidenceIds = [...new Set(result.matched_evidence_ids)];
     const match = { score: result.fit_score, reason: cleanText(result.reason), evidenceIds, evidence: evidenceIds.map(id => profile.evidence.get(id)), requirements: result.requirements_to_check.map(cleanText), assessedAt: now, profileVersion: profile.version };
@@ -153,11 +153,11 @@ export async function assessJobs({ jobs, profile, now, apiKey, fetcher = fetch }
   return { jobs: accepted, usage: { requests: 1, inputTokens: output.usage?.input_tokens || 0, outputTokens: output.usage?.output_tokens || 0 } };
 }
 
-export async function discoverProfileJobs({ profile, previous, existingJobs, now, apiKey, fetcher = fetch, pageFetcher = fetchPublicPage, onProgress = async () => {} }) {
+export async function discoverProfileJobs({ profile, previous, existingJobs, verifiedJobs = [], now, apiKey, fetcher = fetch, pageFetcher = fetchPublicPage, onProgress = async () => {} }) {
   if (!apiKey || apiKey.startsWith('replace-with-')) throw new Error('OPENAI_API_KEY is required for nightly profile-based discovery.');
   const ledger = previous?.profileVersion === profile.version && previous?.policyVersion === POLICY_VERSION ? previous.states || [] : [];
   const reusable = previous?.profileVersion === profile.version && previous?.policyVersion === POLICY_VERSION;
-  const states = [], jobs = reusable ? [...(previous.pendingJobs || [])] : [];
+  const states = [], jobs = [...new Map([...(reusable ? previous.pendingJobs || [] : []), ...verifiedJobs].map(job => [listingKey(job), job])).values()].slice(0, 30);
   const seen = new Set([...existingJobs.filter(job => job.availability !== 'closed' && (!job.profileMatch || job.profileMatch.profileVersion === profile.version)), ...jobs].map(listingKey));
   const seenUrls = new Set([...seen].map(key => key.split('|')[0]));
   let assessment = reusable ? previous.assessment || null : null;
