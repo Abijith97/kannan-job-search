@@ -32,7 +32,8 @@ test('generic employer pages isolate the selected role and reject missing roles'
   const result = jobDescription(html, job, now);
   assert.ok(result.description.includes('Guide students')); assert.ok(!result.description.includes('Develop partnerships'));
   assert.throws(() => jobDescription(html, { ...job, title: 'Admissions Advisor' }, now));
-  assert.equal(jobDescription(html + '<p>This position is closed</p>', job, now).availability, 'closed');
+  assert.equal(jobDescription(html + '<p>This position is closed</p>', job, now).availability, 'open', 'A different role being closed must not hide this one');
+  assert.equal(jobDescription(html.replace('Guide students', 'This position is closed. Guide students'), job, now).availability, 'closed');
 });
 test('discovery accepts relevant roles in supported states from employer cards', () => {
   const source = { id: 'idp', company: 'IDP', type: 'idp', url: 'https://jobs.example/go/India/' };

@@ -32,12 +32,13 @@ for (const source of sources) {
     for (const card of cards) {
       if (seen.has(listingKey(card))) continue;
       try {
-        const html = new URL(card.url).pathname.replace(/\/$/, '') === new URL(source.url).pathname.replace(/\/$/, '') ? pages[0] : await fetchOfficial(card.url, [host]);
+        const genericPage = new URL(card.url).pathname.replace(/\/$/, '') === new URL(source.url).pathname.replace(/\/$/, '');
+        const html = genericPage ? pages[0] : await fetchOfficial(card.url, [host]);
         const detail = jobDescription(html, card);
         const old = [...seeds, ...(previous.jobs || [])].find(job => listingKey(job) === listingKey(card));
         if (detail.availability === 'closed') { if (old) closedIds.add(old.id); continue; }
         const inferred = inferLocations(detailLocation(html));
-        const locations = inferred.length ? inferred : card.locations;
+        const locations = genericPage && card.locations?.length ? card.locations : inferred.length ? inferred : card.locations;
         if (!locations?.length) continue;
         const title = card.title;
         const job = { ...card, id: old?.id || `AUTO-${hash(listingKey(card))}`, sourceId: source.id, locations, brief: old?.brief || detail.description.slice(0, 1500), description: detail.description, publishedAt: detail.publishedAt || card.publishedAt || null, role: /partner/i.test(title) ? 'R1 Partnerships / R2 BD' : /counsell?or|student relation|admission/i.test(title) ? 'R3 Admissions Counselling' : 'R2 Business Development', fit: old?.fit || 'Medium', caution: old?.caution || 'Newly discovered role. Confirm requirements, seniority and work arrangement with the employer.' };

@@ -22,17 +22,17 @@ export async function makeDocx(resume) {
     children.push(paragraph(study.detail));
   }
   children.push(heading('Certifications'));
-  for (const certificate of resume.certifications) children.push(paragraph(certificate, { bullet: { level: 0 }, spacing: { after: 40 } }));
+  resume.certifications.forEach((certificate, index) => children.push(paragraph(certificate, { bullet: { level: 0 }, keepNext: index < resume.certifications.length - 1, spacing: { after: 40 } })));
   const document = new Document({
     creator: resume.name, title: `${resume.name} Resume`, description: 'Editable resume',
     styles: {
-      default: { document: { run: { font: 'Calibri', size: 22, color: '202020' }, paragraph: { spacing: { line: 270 } } } },
+      default: { document: { run: { font: 'Calibri', size: 22, color: '202020' }, paragraph: { spacing: { line: 260 } } } },
       paragraphStyles: [
         { id: 'Title', name: 'Title', basedOn: 'Normal', next: 'Normal', run: { font: 'Calibri', size: 38, bold: true, color: '000000' } },
         { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', run: { font: 'Calibri', size: 23, bold: true, color: '000000' }, paragraph: { keepNext: true } }
       ]
     },
-    sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 850, bottom: 850, left: 850, right: 850 } } }, children }]
+    sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children }]
   });
   return new Uint8Array(await Packer.toArrayBuffer(document));
 }

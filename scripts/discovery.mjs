@@ -29,7 +29,7 @@ export function discoverCards(source, html, now = new Date()) {
   } else if (source.type === 'envision') {
     $('p').each((_, node) => {
       const lines = htmlText($(node).html()).split('\n').map(cleanText).filter(Boolean);
-      if (lines[0] && /–|—| - /.test(lines[0])) add(lines[0], source.url, lines[0], lines.slice(1).join(' '));
+      if (lines[0] && /–|—| - /.test(lines[0])) add(lines[0], source.url, lines[0].split(/–|—| - /).at(-1), lines.slice(1).join(' '));
     });
   } else if (source.type === 'cokonet') {
     $('h4').each((_, node) => { const area = $(node).parent(); const body = cleanText(area.text()); if (!/\b[5-9]\+?\s*years/i.test(body)) add($(node).text(), source.url, body.match(/Full time\s*[·|]\s*([^·|]+)/i)?.[1] || '', body); });

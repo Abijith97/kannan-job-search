@@ -69,9 +69,7 @@ export function jobDescription(html, job, now = new Date()) {
   const $ = load(html);
   const title = cleanText($('h1').first().text());
   const pageText = htmlText(html);
-  const explicitlyClosed = /no longer accepting applications|position (?:has been |is )?closed|job (?:has been |is )?(?:closed|expired)|no longer available/i.test(pageText);
   const expires = structured?.validThrough ? Date.parse(structured.validThrough) : null;
-  const closed = explicitlyClosed || (Number.isFinite(expires) && expires < now.getTime());
   let description = structured?.description ? htmlText(structured.description) : '';
   if (!description) {
     if (normalizedTitle(title) === normalizedTitle(job.title)) {
@@ -94,7 +92,8 @@ export function jobDescription(html, job, now = new Date()) {
       }
     }
   }
-  if (closed) return { description: '', publishedAt: publishedDate(structured?.datePosted), availability: 'closed' };
+  const explicitlyClosed = /no longer accepting applications|position (?:has been |is )?closed|job (?:has been |is )?(?:closed|expired)|no longer available/i.test(description);
+  if (explicitlyClosed || (Number.isFinite(expires) && expires < now.getTime())) return { description: '', publishedAt: publishedDate(structured?.datePosted, now), availability: 'closed' };
   if (description.length < 40 || !suitableTitle(job.title)) throw new Error('A usable description for this exact role could not be read.');
   const posted = publishedDate(structured?.datePosted || $('[itemprop="datePosted"]').attr('content') || $('[itemprop="datePosted"]').text(), now);
   return { description: description.slice(0, 16000), publishedAt: posted, availability: 'open' };
