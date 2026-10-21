@@ -29,7 +29,7 @@ for (const source of sources) {
     const cards = pages.flatMap(html => discoverCards(source, html));
     // Some employers publish a generic careers page. Recheck known exact roles
     // there as well as discovering new role cards.
-    for (const seed of seeds.filter(job => job.sourceId === source.id)) {
+    for (const seed of [...seeds, ...(previous.jobs || [])].filter(job => job.sourceId === source.id)) {
       if (!cards.some(card => listingKey(card) === listingKey(seed))) cards.push({ ...seed });
     }
     if (!cards.length || /we couldn't find|invalid-domain-header|there are no jobs/i.test(pages[0])) throw new Error('The career board did not expose usable listings.');
