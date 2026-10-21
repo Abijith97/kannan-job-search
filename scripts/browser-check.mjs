@@ -5,7 +5,6 @@ import { startPreview } from './preview.mjs';
 import { jobs } from '../.generated/data.mjs';
 import { isNewListing, sortJobs } from '../web/jobs.mjs';
 import { matchesSector } from '../web/sectors.mjs';
-import { matchesCompany, bigFour } from '../web/big-four.mjs';
 
 const preview = await startPreview();
 let browser;
@@ -36,16 +35,7 @@ try {
   assert.equal(await page.locator('.usage-guide').isVisible(), false);
   const active = jobs.filter(job => job.availability !== 'closed');
   assert.equal(await page.locator('#job-rows tr').count(), active.length);
-  assert.equal(await page.locator('.employer-card').count(), 4);
-  for (const company of ['big-four', ...bigFour.map(item => item.id), 'all']) {
-    await page.locator('#company-filter').selectOption(company);
-    assert.equal(await page.locator('#job-rows tr').count(), active.filter(job => matchesCompany(job, company)).length);
-  }
-  await page.locator('#sector-filter').selectOption('other');
-  await page.getByRole('button', { name: 'View EY matches', exact: true }).click();
-  assert.equal(await page.locator('#sector-filter').inputValue(), 'all');
-  assert.equal(await page.locator('#company-filter').inputValue(), 'ey');
-  await page.locator('#company-filter').selectOption('all');
+  assert.equal(await page.locator('.big-four-section, #company-filter').count(), 0);
   assert.equal(await page.locator('.new-badge').count(), active.filter(job => isNewListing(job)).length);
   assert.equal(await page.locator('#job-rows tr').first().getAttribute('data-job-id'), sortJobs(active)[0].id);
   await page.locator('#sort-order').selectOption('oldest');

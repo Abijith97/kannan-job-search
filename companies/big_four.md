@@ -9,7 +9,7 @@ The website checks relevant marketing, communications, client programmes, resear
 | PwC | [India careers](https://www.pwc.in/careers.html) | Public Workday vacancy search and job-detail responses, filtered to supported locations. |
 | KPMG | [India careers](https://kpmg.com/in/en/careers.html) | Public KGS and KDN India Oracle vacancy searches and job-detail responses. The separate KPMG India TalentRecruit board is available through the official careers page; automated coverage does not include that board. |
 
-Open the [website](https://kannan-job-search.abijith97-jobs.workers.dev), sign in and choose **Company → Big Four** or one firm. The Big Four employer cards show shortlist counts and links to the official career portals, including when no suitable match has been verified. Use **All states**, **All industries** and **All roles** to see the complete Big Four shortlist.
+Open the [website](https://kannan-job-search.abijith97-jobs.workers.dev) and sign in. Shortlisted openings appear in the same jobs table as every other employer. Use the existing search box to search a company name, role or location. There is no separate employer section or company filter.
 
 Every new shortlisted job must pass the same full-description resume assessment and score at least 65/100 with documented work-experience evidence. Required qualifications, specialist skills and seniority still apply. Active Big Four postings may have older publication dates; their original dates remain visible. Missing dates are never guessed.
 
