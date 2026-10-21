@@ -96,6 +96,7 @@ export async function collectProfessionalJobs(source, { previousJobs = [], now =
       } else {
         const html = await fetchOfficial(lead.url, [new URL(source.url).hostname], fetcher);
         detail = jobDescription(html, { ...lead, discoveryMethod: 'profile-web-search' }, new Date(now));
+        if (source.id === 'deloitte' && detail.description.includes('Position Summary')) detail.description = detail.description.split('Position Summary').slice(1).join('Position Summary').trim();
         const $ = load(html);
         const locationLabels = $('[itemprop="jobLocation"],.job-location,.location,.jobGeoLocation,.jobLocation').map((_, node) => $(node).text()).get().join('; ');
         const structured = structuredJobs(html).find(job => normalizedTitle(job.title) === normalizedTitle(lead.title));

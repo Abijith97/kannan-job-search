@@ -58,6 +58,14 @@ test('Workday uses supported location facets and fetches real details rather tha
   assert.equal(result.jobs.length, 1); assert.equal(result.jobs[0].publishedAt, '2026-10-18'); assert.equal(result.jobs[0].detailFormat, 'workday');
 });
 
+test('a Deloitte page containing only title, share links and an empty summary is not a verified vacancy', async () => {
+  const source = { id: 'deloitte', company: 'Deloitte', url: 'https://usijobs.deloitte.com/en_US/careersUSI/SearchJobs', queries: ['marketing'] };
+  const url = 'https://usijobs.deloitte.com/en_US/careersUSI/JobDetail/Marketing-Associate/123';
+  const page = '<h1>Marketing Associate</h1><main><p>Location: Hyderabad</p><p>Share Marketing Associate on our social channels and learn more about Deloitte. Share this job and apply for the position.</p><h2>Position Summary</h2></main>';
+  const result = await collectProfessionalJobs(source, { now, fetcher: async address => new Response(String(address).includes('SearchJobs') ? `<a href="${url}">Marketing Associate</a>` : page) });
+  assert.equal(result.jobs.length, 0);
+});
+
 test('company filters recognise the four firms without matching unrelated employer names', () => {
   assert.equal(bigFourOf({ sourceId: 'ey' }), 'ey'); assert.equal(bigFourOf({ company: 'Deloitte USI' }), 'deloitte');
   assert.equal(bigFourOf({ company: 'Monkey Marketing' }), null);
