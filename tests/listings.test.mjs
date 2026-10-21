@@ -10,6 +10,11 @@ test('publication dates are real dates, never guessed from discovery or ambiguou
   assert.equal(publishedDate('2026-09-25T10:30:00Z', now), '2026-09-25');
   for (const value of ['recently', '10/09/26', '2026-02-30', '2027-01-01', null]) assert.equal(publishedDate(value, now), null);
 });
+
+test('location labels extracted from long vacancy descriptions remain concise', () => {
+  const locations = inferLocations('About our software business. '.repeat(12) + 'Location: Chennai, Bangalore and Hyderabad.');
+  assert.deepEqual(locations.map(item => item.label), ['Chennai', 'Bangalore', 'Hyderabad']);
+});
 test('publication sorting keeps unknown dates last in either direction and New expires after seven days', () => {
   const jobs = [{ id: 'A', company: 'A', publishedAt: null }, { id: 'B', company: 'B', publishedAt: '2026-09-25' }, { id: 'C', company: 'C', publishedAt: '2026-09-24' }];
   assert.deepEqual(sortJobs(jobs).map(x => x.id), ['B', 'C', 'A']);

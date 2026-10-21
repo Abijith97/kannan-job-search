@@ -3,6 +3,7 @@ import { AppError, curateResume, resumeText } from './curation.mjs';
 import { makePdf } from './pdf.mjs';
 import { makeDocx } from './docx.mjs';
 import { fetchOfficial, jobDescription } from './listings.mjs';
+import { atsDetails } from './ats.mjs';
 import { sortJobs, isNewListing } from '../web/jobs.mjs';
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers } });
@@ -118,8 +119,8 @@ export class JobWorkspace {
     const cached = await this.state.storage.get(`description:${job.id}`);
     if (cached?.fetchedAt > Date.now() - 6 * 3600000 && cached.url === job.url) return cached;
     try {
-      const html = await fetchOfficial(job.url, sourceHosts);
-      const detail = jobDescription(html, job);
+      const html = await fetchOfficial(job.detailUrl || job.url, sourceHosts);
+      const detail = job.detailFormat ? atsDetails(html, job) : jobDescription(html, job);
       if (detail.availability === 'closed') throw new AppError('The employer has marked this listing closed.', 410);
       const result = { ...detail, fetchedAt: Date.now(), url: job.url };
       await this.state.storage.put(`description:${job.id}`, result);

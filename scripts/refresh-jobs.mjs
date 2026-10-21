@@ -6,6 +6,7 @@ import { discoveryProfile, discoverProfileJobs, inspectCandidate } from './profi
 import { fetchPublicPage } from './public-web.mjs';
 import { discoverCards, detailLocation, mergeSnapshot } from './discovery.mjs';
 import { fetchOfficial, jobDescription, inferLocations, listingKey, normalizedTitle } from '../src/listings.mjs';
+import { collectProfessionalJobs } from './professional-services.mjs';
 
 const sources = JSON.parse(await readFile('data/sources.json', 'utf8'));
 const previous = await readFile('data/job-snapshot.json', 'utf8').then(JSON.parse).catch(error => { if (error.code === 'ENOENT') return { jobs: [] }; throw error; });
@@ -19,6 +20,14 @@ const profile = discoveryProfile(parseResume(await readFile('resume/Arun_Kannan_
 for (const source of sources) {
   let count = 0, warning = null;
   try {
+    if (source.type === 'professional-services') {
+      const result = await collectProfessionalJobs(source, { previousJobs: previous.jobs || [], now });
+      discovered.push(...result.jobs);
+      for (const id of result.closedIds) closedIds.add(id);
+      sourceResults.push({ id: source.id, company: source.company, status: result.status, checkedAt: now, count: result.jobs.length, candidateCount: result.candidateCount, message: result.message });
+      console.log(`${source.id}: ${result.status}; ${result.jobs.length} relevant vacancies verified before profile assessment`);
+      continue;
+    }
     const host = new URL(source.url).hostname;
     const pages = [await fetchOfficial(source.url, [host])];
     if (source.type === 'idp') {

@@ -88,6 +88,14 @@ test('cross-industry searches cannot publish education, consulting or unconfirme
   const existing = await assessJobs({ jobs: [{ ...job, searchScope: undefined }], profile, now, apiKey: 'fake', fetcher: async () => assessmentResponse(['WEB-1'], true, 'education') });
   assert.equal(existing.jobs.length, 1, 'Existing education employers remain eligible');
 });
+
+test('active Big Four support roles remain eligible in consulting even with an older publication date', async () => {
+  const job = { ...candidate, id: 'BIG4-1', company: 'EY', searchScope: 'big-four', publishedAt: '2026-08-01', searchState: 'Tamil Nadu', locations: [{ state: 'Tamil Nadu', label: candidate.location }], description };
+  const result = await assessJobs({ jobs: [job], profile, now, apiKey: 'fake', fetcher: async () => assessmentResponse(['BIG4-1'], true, 'consulting') });
+  assert.equal(result.jobs.length, 1); assert.equal(result.jobs[0].sector, 'consulting');
+  const regular = await assessJobs({ jobs: [{ ...job, searchScope: 'cross-industry' }], profile, now, apiKey: 'fake', fetcher: async () => assessmentResponse(['BIG4-1'], true, 'consulting') });
+  assert.equal(regular.jobs.length, 0);
+});
 test('nightly pipeline covers all five states, verifies pages, then assesses before publishing', async () => {
   let searches = 0, assessments = 0, checked = 0; const progress = [];
   const result = await discoverProfileJobs({ profile, previous: null, existingJobs: [], now, apiKey: 'fake',

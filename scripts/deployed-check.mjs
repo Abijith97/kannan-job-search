@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { jobs as expectedJobs } from '../.generated/data.mjs';
 import { isOtherIndustry } from '../web/sectors.mjs';
+import { bigFourOf } from '../web/big-four.mjs';
 
 const origin = new URL(process.env.SITE_URL).origin;
 const password = process.env.APP_ACCESS_PASSWORD;
@@ -20,6 +21,10 @@ try {
   const expectedOther = expectedJobs.filter(job => job.availability !== 'closed' && isOtherIndustry(job));
   for (const job of expectedOther) assert.ok(data.jobs.some(actual => actual.id === job.id && isOtherIndustry(actual)), `Missing other-industry vacancy: ${job.id}`);
   console.log(`Verified ${expectedOther.length} other-industry jobs in the live catalog.`);
+  const expectedBigFour = expectedJobs.filter(job => job.availability !== 'closed' && bigFourOf(job));
+  for (const job of expectedBigFour) assert.ok(data.jobs.some(actual => actual.id === job.id && bigFourOf(actual)), `Missing Big Four vacancy: ${job.id}`);
+  assert.match(await home.text(), /big-four-companies/);
+  console.log(`Verified Big Four employer section and ${expectedBigFour.length} shortlisted jobs in the live catalog.`);
   let last = Infinity, undated = false;
   for (const job of data.jobs) {
     if (!job.publishedAt) { undated = true; continue; }

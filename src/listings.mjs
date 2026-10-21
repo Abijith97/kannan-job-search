@@ -47,7 +47,13 @@ export function publishedDate(value, now = new Date()) {
   const result = new Date(timestamp).toISOString().slice(0, 10);
   return result === date.slice(0, 10) ? result : null;
 }
-export function inferLocations(label) { return cityStates.filter(([, pattern]) => pattern.test(label)).map(([state]) => ({ state, label: cleanText(label).slice(0, 350) })); }
+export function inferLocations(label) {
+  const text = cleanText(label);
+  return cityStates.filter(([, pattern]) => pattern.test(text)).map(([state, pattern]) => {
+    const matched = text.match(pattern)?.[0] || state;
+    return { state, label: text.length > 160 ? matched[0].toUpperCase() + matched.slice(1) : text };
+  });
+}
 export function suitableTitle(title) {
   return /business development|\bBDE\b|partner(ship| acquisition| relations| success)|student relation|counsell?or|admission|recruitment representative|relationship (manager|executive)|external marketing executive|community (executive|associate|growth)|customer success|account (executive|management associate)|(?:inside|channel|development|operations) sales|sales (development|operations|coordinator)|business operations|social media|content (writer|marketing|executive)|marketing coordinator|market research/i.test(title)
     && !/head\b|director|vice president|psycholog|therap|clinical|intern(ship)?\b|trainer/i.test(title);
@@ -101,7 +107,7 @@ export function jobDescription(html, job, now = new Date()) {
   if (description.length < 500 && visibleDescription.length > description.length) description = visibleDescription;
   const explicitlyClosed = /no longer accepting applications|position (?:has been |is )?closed|job (?:has been |is )?(?:closed|expired)|no longer available/i.test(description);
   if (explicitlyClosed || (Number.isFinite(expires) && expires < now.getTime())) return { description: '', publishedAt: publishedDate(structured?.datePosted, now), availability: 'closed' };
-  if (description.length < 40 || (!suitableTitle(job.title) && job.discoveryMethod !== 'profile-web-search')) throw new Error('A usable description for this exact role could not be read.');
+  if (description.length < 40 || (!suitableTitle(job.title) && !['profile-web-search', 'profile-assessed-employer'].includes(job.discoveryMethod))) throw new Error('A usable description for this exact role could not be read.');
   const posted = publishedDate(structured?.datePosted || $('[itemprop="datePosted"]').attr('content') || $('[itemprop="datePosted"]').text(), now);
   return { description: description.slice(0, 16000), publishedAt: posted, availability: 'open' };
 }
