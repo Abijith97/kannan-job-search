@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { startPreview } from './preview.mjs';
 import { jobs } from '../.generated/data.mjs';
 import { isNewListing, sortJobs } from '../web/jobs.mjs';
+import { matchesSector } from '../web/sectors.mjs';
 
 const preview = await startPreview();
 let browser;
@@ -50,6 +51,10 @@ try {
     await firstMatch.locator('.fit-details summary').click();
   }
   await page.locator('#status-filter').selectOption('all');
+  for (const sector of ['other', 'education-consulting', 'all']) {
+    await page.locator('#sector-filter').selectOption(sector);
+    assert.equal(await page.locator('#job-rows tr').count(), active.filter(job => matchesSector(job, sector)).length);
+  }
   await page.getByRole('button', { name: 'Tamil Nadu', exact: true }).click();
   assert.equal(await page.locator('#job-rows tr').count(), active.filter(job => job.locations.some(x => x.state === 'Tamil Nadu')).length);
   const row = page.locator('tr[data-job-id="SM-BDO"]');

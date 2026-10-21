@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { profile as sourceProfile } from '../.generated/data.mjs';
-import { discoveryProfile, searchState, validateCandidate, inspectCandidate, discoverProfileJobs, assessJobs, POLICY_VERSION, ASSESSMENT_VERSION } from '../scripts/profile-search.mjs';
+import { discoveryProfile, searchTheme, searchState, validateCandidate, inspectCandidate, discoverProfileJobs, assessJobs, POLICY_VERSION, ASSESSMENT_VERSION } from '../scripts/profile-search.mjs';
 import { publicIPv4, publicJobUrl } from '../scripts/public-web.mjs';
 import { targetStates } from '../src/listings.mjs';
 
@@ -10,12 +10,12 @@ const profile = discoveryProfile(sourceProfile, await readFile('roles/suitable_r
 const now = '2026-10-20T12:00:00.000Z';
 const url = 'https://careers.acme.com/jobs/12345';
 const factId = sourceProfile.experiences[0].bullets[0].id;
-const candidate = { title: 'Channel Partnerships Associate', company: 'Acme Education', url, location: 'Chennai, Tamil Nadu', fit_score: 85, fit_reason: 'Channel partner acquisition matches the documented education partnerships work.', matched_evidence_ids: [factId], requirements_to_check: ['Confirm territory travel requirements.'] };
-const description = '<p>Build and onboard channel partners for education programmes. Own partner acquisition, research new opportunities, manage commercial relationships and maintain the admissions pipeline. Location: Chennai, Tamil Nadu.</p>';
+const candidate = { title: 'Channel Partnerships Associate', company: 'Acme Software', url, location: 'Chennai, Tamil Nadu', fit_score: 85, fit_reason: 'Channel partner acquisition matches the documented partner onboarding and commercial relationship work.', matched_evidence_ids: [factId], requirements_to_check: ['Confirm territory travel requirements.'] };
+const description = '<p>Build and onboard channel partners for business software products. Own partner acquisition, research new opportunities, manage commercial relationships and maintain the sales pipeline. Location: Chennai, Tamil Nadu.</p>';
 const html = `<h1>Channel Partnerships Associate</h1><script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: candidate.title, hiringOrganization: { name: candidate.company }, description, datePosted: '2026-10-18', jobLocation: { address: { addressLocality: 'Chennai', addressRegion: 'Tamil Nadu', addressCountry: 'IN' } } })}</script>`;
 const completed = (value, extra = []) => new Response(JSON.stringify({ status: 'completed', output: [...extra, { type: 'message', content: [{ type: 'output_text', text: JSON.stringify(value) }] }], usage: { input_tokens: 100, output_tokens: 50 } }));
 const searchResponse = (jobs = [candidate]) => completed({ jobs }, [{ type: 'web_search_call', status: 'completed', action: { type: 'search', sources: [{ url }] } }]);
-const assessmentResponse = (ids, suitable = true) => completed({ assessments: Object.fromEntries(ids.map(id => [id, { suitable, fit_score: suitable ? 85 : 30, reason: candidate.fit_reason, matched_evidence_ids: [factId], requirements_to_check: candidate.requirements_to_check }])) });
+const assessmentResponse = (ids, suitable = true, sector = 'technology') => completed({ assessments: Object.fromEntries(ids.map(id => [id, { suitable, sector, fit_score: suitable ? 85 : 30, reason: candidate.fit_reason, matched_evidence_ids: [factId], requirements_to_check: candidate.requirements_to_check }])) });
 
 test('search reads the real resume and researched role families but excludes contact details', () => {
   const serialized = JSON.stringify(profile.facts);
@@ -34,6 +34,8 @@ test('state search forces live web search, limits calls, uses current profile an
     assert.deepEqual(data.tool_choice, { type: 'web_search' }); assert.equal(data.store, false);
     assert.equal(data.text.format.strict, true); assert.ok(data.include.includes('web_search_call.action.sources'));
     assert.equal(JSON.parse(data.input).state, 'Tamil Nadu'); assert.ok(!options.body.includes('arunkannan1999@gmail.com'));
+    assert.match(data.instructions, /OUTSIDE education/);
+    assert.deepEqual(JSON.parse(data.input).search_theme, searchTheme('Tamil Nadu', now));
     return searchResponse();
   } });
   assert.equal(result.jobs.length, 1); assert.ok(result.sourceUrls.has(url));
@@ -66,7 +68,25 @@ test('full job assessment rejects hallucinated evidence, omissions and duplicate
   assert.equal(good.jobs[0].profileMatch.score, 85);
   assert.equal((await assessJobs({ ...base, fetcher: async () => assessmentResponse(['WEB-1'], false) })).jobs.length, 0);
   await assert.rejects(assessJobs({ ...base, fetcher: async () => assessmentResponse([]) }), /exactly once/);
-  await assert.rejects(assessJobs({ ...base, fetcher: async () => completed({ assessments: { 'WEB-1': { suitable: true, fit_score: 85, reason: 'Invented fit', matched_evidence_ids: ['fabricated'], requirements_to_check: [] } } }) }), /evidence/);
+  await assert.rejects(assessJobs({ ...base, fetcher: async () => completed({ assessments: { 'WEB-1': { suitable: true, sector: 'technology', fit_score: 85, reason: 'Invented fit', matched_evidence_ids: ['fabricated'], requirements_to_check: [] } } }) }), /evidence/);
+});
+
+test('all five themes are covered daily and each state rotates through them over five days', () => {
+  assert.equal(new Set(targetStates.map(state => searchTheme(state, now).id)).size, 5);
+  for (const state of targetStates) {
+    const days = Array.from({ length: 5 }, (_, day) => new Date(Date.parse(now) + day * 86400000).toISOString());
+    assert.equal(new Set(days.map(date => searchTheme(state, date).id)).size, 5);
+  }
+});
+
+test('cross-industry searches cannot publish education, consulting or unconfirmed sectors', async () => {
+  const job = { ...candidate, id: 'WEB-1', searchScope: 'cross-industry', searchState: 'Tamil Nadu', locations: [{ state: 'Tamil Nadu', label: candidate.location }], description };
+  for (const sector of ['education', 'consulting', 'unknown', 'technology']) {
+    const result = await assessJobs({ jobs: [job], profile, now, apiKey: 'fake', fetcher: async () => assessmentResponse(['WEB-1'], true, sector) });
+    assert.equal(result.jobs.length, sector === 'technology' ? 1 : 0);
+  }
+  const existing = await assessJobs({ jobs: [{ ...job, searchScope: undefined }], profile, now, apiKey: 'fake', fetcher: async () => assessmentResponse(['WEB-1'], true, 'education') });
+  assert.equal(existing.jobs.length, 1, 'Existing education employers remain eligible');
 });
 test('nightly pipeline covers all five states, verifies pages, then assesses before publishing', async () => {
   let searches = 0, assessments = 0, checked = 0; const progress = [];

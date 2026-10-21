@@ -1,4 +1,5 @@
 import { sortJobs } from './jobs.mjs';
+import { sectors, sectorOf, matchesSector } from './sectors.mjs';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 const states = ['All states', 'Tamil Nadu', 'Kerala', 'Karnataka', 'Telangana', 'Maharashtra'];
@@ -42,7 +43,7 @@ function render() {
   const query = $('#search').value.trim().toLowerCase();
   const status = $('#status-filter').value;
   const matchesStatus = job => status === 'all' || (status === 'recent' ? job.isNew : status === 'matched' ? Boolean(job.profileMatch) : job.status === status);
-  const rows = sortJobs(jobs.filter(job => locations(job).length && matchesStatus(job) && `${job.title} ${job.company} ${job.locations.map(x => `${x.state} ${x.label}`).join(' ')}`.toLowerCase().includes(query)), $('#sort-order').value);
+  const rows = sortJobs(jobs.filter(job => locations(job).length && matchesStatus(job) && matchesSector(job, $('#sector-filter').value) && `${job.title} ${job.company} ${job.locations.map(x => `${x.state} ${x.label}`).join(' ')}`.toLowerCase().includes(query)), $('#sort-order').value);
   $('#total-count').textContent = String(jobs.length).padStart(2, '0');
   $('#ready-count').textContent = String(jobs.filter(x => generationAvailable ? x.hasResume : x.status === 'interested').length).padStart(2, '0');
   $('#ready-label').textContent = generationAvailable ? 'resumes ready' : 'roles of interest';
@@ -56,6 +57,10 @@ function render() {
     const statusLabel = job.status === 'ready' ? 'Resume ready' : job.status === 'skipped' ? 'Skipped' : job.status === 'interested' ? 'Interested' : `${job.fit} fit`;
     return `<tr class="${job.status === 'skipped' ? 'skipped-row' : ''}" data-job-id="${escape(job.id)}"><td><div class="role-cell"><span class="company-mark" aria-hidden="true">${escape(job.company[0])}</span><div><span class="role-title">${escape(job.title)}${job.isNew ? '<span class="new-badge">New</span>' : ''}</span><div class="company-line">${escape(job.company)}<span class="role-badge ${job.status}">${escape(statusLabel)}</span></div></div></div></td><td><a class="job-link" href="${escape(job.url)}" target="_blank" rel="noopener noreferrer">View opening ↗</a></td><td class="location">${escape(primaryLocation)}<small>${escape(secondaryLocation)}</small></td><td class="published-date">${job.publishedAt ? escape(new Date(job.publishedAt + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })) : '<span class="quiet">Date unavailable</span>'}<small>Checked ${escape(job.checked)}</small></td><td><div class="row-actions">${job.status === 'skipped' ? `<button class="button secondary" data-action="restore" data-id="${job.id}">Restore</button>` : `<button class="button primary" data-action="${job.hasResume ? 'review' : 'apply'}" data-id="${job.id}">${job.hasResume ? 'View resume' : 'Create custom resume'}</button><button class="text-button" data-action="skip" data-id="${job.id}" aria-label="Skip ${escape(job.title)} at ${escape(job.company)}">Skip</button>`}</div></td></tr>`;
   }).join('');
+  for (const job of rows) {
+    const cell = document.querySelector(`tr[data-job-id="${job.id}"] .role-cell>div`);
+    cell.insertAdjacentHTML('beforeend', `<p class="sector-label">${escape(sectors[sectorOf(job)])}</p>`);
+  }
   for (const job of rows.filter(job => job.profileMatch)) {
     const match = job.profileMatch;
     const cell = document.querySelector(`tr[data-job-id="${job.id}"] .role-cell>div`);
@@ -120,8 +125,9 @@ $('#logout').addEventListener('click', async () => { try { await api('/api/logou
 $('#search').addEventListener('input', render);
 $('#status-filter').addEventListener('change', render);
 $('#sort-order').addEventListener('change', render);
+$('#sector-filter').addEventListener('change', render);
 $('#state-filters').addEventListener('click', event => { const button = event.target.closest('[data-state]'); if (button) { selectedState = button.dataset.state; render(); } });
-$('#reset-filters').addEventListener('click', () => { selectedState = 'All states'; $('#status-filter').value = 'all'; $('#search').value = ''; render(); });
+$('#reset-filters').addEventListener('click', () => { selectedState = 'All states'; $('#status-filter').value = 'all'; $('#sector-filter').value = 'all'; $('#search').value = ''; render(); });
 $('#close-dialog').addEventListener('click', () => dialog.close());
 dialog.addEventListener('close', () => selectedJob = null);
 $('#job-rows').addEventListener('click', async event => {
