@@ -14,7 +14,7 @@ export function htmlText(html) {
   let input = String(html || ''), result = '';
   for (let pass = 0; pass < 2; pass++) {
     const $ = load(input); $('script,style,noscript,nav,header,footer,svg').remove();
-    $('br').replaceWith('\n'); $('p,li,div,h1,h2,h3,h4,h5,h6').append('\n');
+    $('br').replaceWith('\n'); $('p,li,div,h1,h2,h3,h4,h5,h6,button,article,section').prepend('\n').append('\n');
     result = $.root().text().replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
     if (!/<\/?(?:p|div|span|h[1-6]|table|ul|li)\b[^>]*>/i.test(result)) break;
     input = result;
@@ -49,7 +49,7 @@ export function publishedDate(value, now = new Date()) {
 }
 export function inferLocations(label) { return cityStates.filter(([, pattern]) => pattern.test(label)).map(([state]) => ({ state, label: cleanText(label).slice(0, 350) })); }
 export function suitableTitle(title) {
-  return /business development|\bBDE\b|partner(ship| acquisition| relations| success)|student relation|counsell?or|admission|recruitment representative|relationship manager|external marketing executive|community (executive|associate)/i.test(title)
+  return /business development|\bBDE\b|partner(ship| acquisition| relations| success)|student relation|counsell?or|admission|recruitment representative|relationship (manager|executive)|external marketing executive|community (executive|associate|growth)|customer success|account (executive|management associate)|(?:inside|channel|development|operations) sales|sales (development|operations|coordinator)|business operations|social media|content (writer|marketing|executive)|marketing coordinator|market research/i.test(title)
     && !/head\b|director|vice president|psycholog|therap|clinical|intern(ship)?\b|trainer/i.test(title);
 }
 export function structuredJobs(html) {
@@ -71,27 +71,34 @@ export function jobDescription(html, job, now = new Date()) {
   const pageText = htmlText(html);
   const expires = structured?.validThrough ? Date.parse(structured.validThrough) : null;
   let description = structured?.description ? htmlText(structured.description) : '';
-  if (!description) {
+  let visibleDescription = '';
+  {
     if (normalizedTitle(title) === normalizedTitle(job.title)) {
       const container = $('h1').first().closest('main,article,.job-description,.content');
-      description = htmlText(container.length ? container.html() : html);
+      visibleDescription = htmlText(container.length ? container.html() : html);
     } else {
-      // Generic career pages contain multiple jobs. Select only this role's section.
+      // Keep this vacancy's subheadings (requirements/responsibilities). Stopping
+      // at every h4 previously discarded most of a multi-role page's details.
+      const heading = $('h2,h3,h4,h5,h6').filter((_, node) => normalizedTitle($(node).text()) === normalizedTitle(job.title)).first();
+      const level = Number(heading[0]?.tagName.slice(1)) || 3;
       const lines = pageText.split('\n').map(cleanText).filter(Boolean);
       const start = lines.findIndex(line => normalizedTitle(line) === normalizedTitle(job.title));
       if (start >= 0) {
         const selected = [];
-        const headings = new Set($('h2,h3,h4').map((_, node) => normalizedTitle($(node).text())).get());
+        const headings = new Set($('h1,h2,h3,h4,h5,h6').filter((_, node) => Number(node.tagName.slice(1)) <= level).map((_, node) => normalizedTitle($(node).text())).get());
         for (const line of lines.slice(start + 1)) {
           if (headings.has(normalizedTitle(line)) && selected.length) break;
-          if (/^apply(?: now)?\s*[→↗]?$/i.test(line)) { if (new URL(job.url).hostname !== 'cokonetoverseas.com' && selected.length) break; continue; }
+          if (/^apply(?: now)?\s*[→↗]?$/i.test(line)) continue;
           if (/^(?:current openings|related jobs|our hiring process|about us)$/i.test(line)) break;
           selected.push(line); if (selected.join('\n').length > 9000) break;
         }
-        description = `${job.title}\n${selected.join('\n')}`;
+        visibleDescription = `${job.title}\n${selected.join('\n')}`;
       }
     }
   }
+  // JobPosting metadata is sometimes only a one-line SEO teaser. Prefer the
+  // longer, exact-role visible section, while retaining metadata dates/expiry.
+  if (description.length < 500 && visibleDescription.length > description.length) description = visibleDescription;
   const explicitlyClosed = /no longer accepting applications|position (?:has been |is )?closed|job (?:has been |is )?(?:closed|expired)|no longer available/i.test(description);
   if (explicitlyClosed || (Number.isFinite(expires) && expires < now.getTime())) return { description: '', publishedAt: publishedDate(structured?.datePosted, now), availability: 'closed' };
   if (description.length < 40 || (!suitableTitle(job.title) && job.discoveryMethod !== 'profile-web-search')) throw new Error('A usable description for this exact role could not be read.');

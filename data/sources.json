@@ -5,5 +5,10 @@
   { "id": "zolve", "company": "Zolve", "type": "freshteam", "url": "https://zolve.freshteam.com/jobs" },
   { "id": "leap", "company": "Leap", "type": "freshteam", "url": "https://leapfinance.freshteam.com/jobs" },
   { "id": "viavifa", "company": "VIAVIFA Global Immigration Services", "type": "viavifa", "url": "https://viavifa.com/careers" },
-  { "id": "cokonet", "company": "Cokonet Overseas", "type": "cokonet", "url": "https://cokonetoverseas.com/careers" }
+  { "id": "cokonet", "company": "Cokonet Overseas", "type": "cokonet", "url": "https://cokonetoverseas.com/careers" },
+  { "id": "femtosoft", "company": "Femtosoft Technologies", "type": "vacancy", "title": "Business Development Executive", "url": "https://femtosoft.in/careers/business-development-executive.html", "employerContext": "Software development and digital marketing services provider in Chennai." },
+  { "id": "daasil", "company": "DAASIL", "type": "headings", "url": "https://daasil.com/careers", "employerContext": "Business CRM software platform for local businesses across industries." },
+  { "id": "kpro", "company": "KPro Digii", "type": "headings", "url": "https://kprodigii.com/careers", "employerContext": "Digital marketing agency serving businesses in Mumbai and Maharashtra." },
+  { "id": "teknoppy", "company": "Teknoppy", "type": "headings", "url": "https://www.teknoppy.com/career/", "employerContext": "Web design and digital marketing agency in Kochi." },
+  { "id": "bluesapling", "company": "BlueSapling", "type": "vacancy", "title": "Customer Success Associate", "url": "https://wellfound.com/jobs/634991-customer-success-associate", "employerContext": "Enterprise software and digital transformation company in Bengaluru; vacancy published on Wellfound." }
 ]

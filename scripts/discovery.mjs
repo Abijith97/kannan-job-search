@@ -1,5 +1,5 @@
 import { load } from 'cheerio/slim';
-import { cleanText, canonicalUrl, htmlText, inferLocations, publishedDate, structuredJobs, suitableTitle, normalizedTitle, listingKey } from '../src/listings.mjs';
+import { cleanText, canonicalUrl, htmlText, inferLocations, publishedDate, structuredJobs, suitableTitle, normalizedTitle, listingKey, jobDescription } from '../src/listings.mjs';
 
 export function discoverCards(source, html, now = new Date()) {
   const $ = load(html), found = [];
@@ -14,7 +14,15 @@ export function discoverCards(source, html, now = new Date()) {
     const addresses = [structured.jobLocation].flat().filter(Boolean).map(x => x.address || x);
     add(structured.title, structured.url || source.url, addresses.map(x => [x.addressLocality, x.addressRegion, x.addressCountry].filter(Boolean).join(', ')).join('; '), htmlText(structured.description || ''), structured.datePosted);
   }
-  if (source.type === 'idp') {
+  if (source.type === 'headings' || source.type === 'vacancy') {
+    const titles = source.type === 'vacancy' ? [source.title] : [...new Set($('h1,h2,h3,h4,h5,h6').map((_, node) => cleanText($(node).text())).get())];
+    for (const title of titles.filter(suitableTitle)) {
+      try {
+        const detail = jobDescription(html, { title, url: source.url, discoveryMethod: 'profile-web-search' }, now);
+        if (detail.availability !== 'closed' && detail.description.length >= 120) add(title, source.url, detail.description, detail.description, detail.publishedAt);
+      } catch { /* An index entry without a full description is not a vacancy. */ }
+    }
+  } else if (source.type === 'idp') {
     $('tr.data-row').each((_, row) => {
       const node = $(row), link = node.find('a.jobTitle-link').first();
       add(link.text(), link.attr('href'), node.find('.jobLocation').first().text(), '', node.find('.jobDate').first().text());

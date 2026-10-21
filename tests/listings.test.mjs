@@ -41,6 +41,34 @@ test('discovery accepts relevant roles in supported states from employer cards',
   const cards = discoverCards(source, html, now);
   assert.equal(cards.length, 1); assert.equal(cards[0].publishedAt, '2026-09-25'); assert.equal(cards[0].locations[0].state, 'Tamil Nadu');
 });
+
+test('full visible vacancy overrides a metadata teaser and retains nested requirements', () => {
+  const html = `<script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: 'Social Media Executive', description: 'Plan social content.', datePosted: '2026-10-18' })}</script><h3>Social Media Executive</h3><p>Mumbai. Plan content calendars and coordinate social campaigns with clients.</p><h4>Responsibilities</h4><p>Publish posts, engage the community and report results.</p><h4>Requirements</h4><p>One year of experience. English writing and basic analytics required.</p><h3>Software Developer</h3><p>This position is closed. Advanced Java required.</p>`;
+  const result = jobDescription(html, { title: 'Social Media Executive', url: 'https://employer.example/careers' }, now);
+  assert.match(result.description, /English writing and basic analytics required/);
+  assert.doesNotMatch(result.description, /Advanced Java|position is closed/);
+  assert.equal(result.publishedAt, '2026-10-18');
+  assert.equal(result.availability, 'open');
+  const cards = discoverCards({ id: 'agency', company: 'Agency', type: 'headings', url: 'https://employer.example/careers' }, html, now);
+  assert.equal(cards.length, 1); assert.equal(cards[0].locations[0].state, 'Maharashtra');
+});
+
+test('an early Apply button does not cut off a multi-state employer vacancy', () => {
+  const html = '<h3>Business Development Executive</h3><p>2 openings</p><button>Apply Now</button><p>Hyderabad and Bangalore</p><h4>Responsibilities</h4><p>Identify local businesses, maintain CRM records and onboard new customers.</p><h4>Requirements</h4><p>0–2 years experience in sales. Local language and willingness to travel required.</p><h3>Software Developer</h3><p>Chennai. Build software applications.</p>';
+  const cards = discoverCards({ id: 'crm', company: 'CRM', type: 'headings', url: 'https://employer.example/careers' }, html, now);
+  assert.equal(cards.length, 1);
+  assert.deepEqual(cards[0].locations.map(location => location.state), ['Karnataka', 'Telangana']);
+  assert.match(cards[0].brief, /willingness to travel required/);
+  assert.doesNotMatch(cards[0].brief, /Build software applications/);
+});
+
+test('a complete structured vacancy is not replaced by unrelated visible page content', () => {
+  const description = 'Serve customers and coordinate account onboarding in Bangalore. '.repeat(10);
+  const html = `<script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: 'Customer Success Associate', description })}</script><h1>Customer Success Associate</h1><p>${description}</p><h2>Other jobs</h2><p>This position is closed.</p>`;
+  const result = jobDescription(html, { title: 'Customer Success Associate', url: 'https://employer.example/jobs/1' }, now);
+  assert.equal(result.availability, 'open');
+  assert.doesNotMatch(result.description, /position is closed/);
+});
 test('refresh preserves IDs and first-seen dates, prevents ATS duplicates and retains records on source failures', () => {
   const seed = { id: 'SEED', title: 'Business Development Associate', url: 'https://zolve.freshteam.com/jobs/ABC/applicants', isSeed: true, firstSeenAt: '2026-10-18T00:00:00Z', sourceId: 'zolve' };
   const found = { ...seed, id: 'AUTO-NEW', url: 'https://zolve.freshteam.com/jobs/ABC/business-development-associate', isSeed: undefined, firstSeenAt: undefined };

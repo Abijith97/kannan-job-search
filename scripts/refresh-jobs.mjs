@@ -41,12 +41,12 @@ for (const source of sources) {
         const detail = jobDescription(html, card);
         const old = [...seeds, ...(previous.jobs || [])].find(job => listingKey(job) === listingKey(card));
         if (detail.availability === 'closed') { if (old) closedIds.add(old.id); continue; }
-        const inferred = inferLocations(detailLocation(html));
+        const inferred = inferLocations(['headings', 'vacancy'].includes(source.type) ? detail.description : detailLocation(html));
         const locations = genericPage && card.locations?.length ? card.locations : inferred.length ? inferred : card.locations;
         if (!locations?.length) continue;
         const title = card.title;
         const job = { ...card, id: old?.id || `AUTO-${hash(listingKey(card))}`, sourceId: source.id, locations, brief: old?.brief || detail.description.slice(0, 1500), description: detail.description, publishedAt: detail.publishedAt || card.publishedAt || null, role: /partner/i.test(title) ? 'R1 Partnerships / R2 BD' : /counsell?or|student relation|admission/i.test(title) ? 'R3 Admissions Counselling' : 'R2 Business Development', fit: old?.fit || 'Medium', caution: old?.caution || 'Newly discovered role. Confirm requirements, seniority and work arrangement with the employer.' };
-        discovered.push(job); seen.add(listingKey(job)); count++;
+        discovered.push({ ...job, employerContext: source.employerContext }); seen.add(listingKey(job)); count++;
       } catch (error) { warning = 'Some role detail pages could not be read; their earlier records were preserved.'; }
     }
     if (!count) throw new Error('No relevant exact-role descriptions could be verified.');

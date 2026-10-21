@@ -1,5 +1,7 @@
 // Runs inside GitHub Actions. Secrets stay in process memory and are never printed.
 import assert from 'node:assert/strict';
+import { jobs as expectedJobs } from '../.generated/data.mjs';
+import { isOtherIndustry } from '../web/sectors.mjs';
 
 const origin = new URL(process.env.SITE_URL).origin;
 const password = process.env.APP_ACCESS_PASSWORD;
@@ -15,6 +17,9 @@ try {
   const data = await response.json(); assert.ok(data.jobs.length >= 17); assert.equal(data.generationAvailable, true);
   assert.equal(new Set(data.jobs.flatMap(job => job.locations.map(location => location.state))).size, 5);
   assert.ok(data.jobs.every(job => new URL(job.url).protocol === 'https:'));
+  const expectedOther = expectedJobs.filter(job => job.availability !== 'closed' && isOtherIndustry(job));
+  for (const job of expectedOther) assert.ok(data.jobs.some(actual => actual.id === job.id && isOtherIndustry(actual)), `Missing other-industry vacancy: ${job.id}`);
+  console.log(`Verified ${expectedOther.length} other-industry jobs in the live catalog.`);
   let last = Infinity, undated = false;
   for (const job of data.jobs) {
     if (!job.publishedAt) { undated = true; continue; }
